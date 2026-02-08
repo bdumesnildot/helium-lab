@@ -1,0 +1,59 @@
+# DOCKER UTILS
+
+networks:
+    docker_socket_proxy:
+        external: true
+
+services:
+    # ----------------------------------------
+    # SOCKET-PROXY
+    # security-enhanced proxy which allows you to apply access rules to the Docker socket
+    # ----------------------------------------
+    socket-proxy:
+        image: lscr.io/linuxserver/socket-proxy:latest
+        container_name: socket-proxy
+        user: root
+        environment:
+            - LOG_LEVEL=info
+            - EVENTS=1
+            - PING=1
+            - VERSION=1
+
+            - INFO=1 # Authentik, Portainer
+            - IMAGES=0 # Portainer, backup
+            - NETWORKS=0 # Portainer
+            - VOLUMES=0 # Portainer, backup
+            - CONTAINERS=1 # Traefik, Authentik, portainer, backup, etc.
+
+            - ALLOW_START=1 # Authentik, Portainer, backup
+            - ALLOW_STOP=1 # Authentik, Portainer, backup
+            - ALLOW_RESTARTS=0 # Portainer
+            - SERVICES=0 # Portainer
+            - TASKS=0 # Portainer, backup
+            - EXEC=0 # backup
+            - POST=1 # Authentik, backup, Watchtower
+            - NODES=0 # backup
+
+            - AUTH=0
+            - SECRETS=0
+            - BUILD=0
+            - COMMIT=0
+            - CONFIGS=0
+            - DISTRIBUTION=0
+            - PLUGINS=0
+            - SESSION=0
+            - SWARM=0
+            - SYSTEM=0
+            - DISABLE_IPV6=0
+        networks:
+            - docker_socket_proxy
+        ports:
+            - ${SOCKET_PROXY_PORT:-2375}:2375
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        tmpfs:
+            - /run
+        read_only: true
+        security_opt:
+            - no-new-privileges:true
+        restart: unless-stopped

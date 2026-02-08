@@ -1,0 +1,161 @@
+# ANTHENTIK AUTH SERVICES
+
+volumes:
+    authentik_postgresql_data:
+    authentik_redis_data:
+
+networks:
+    authentik_server:
+    traefik_proxy:
+        external: true
+    docker_socket_proxy:
+        external: true
+
+services:
+    # ----------------------
+    # POSTGRES
+    # ----------------------
+    authentik-postgresql:
+        image: docker.io/library/postgres:16-alpine
+        container_name: authentik-postgresql
+        user: root
+        environment:
+            TZ: ${TZ}
+            POSTGRES_DB: ${PG_DB}
+            POSTGRES_USER: ${PG_USER}
+            POSTGRES_PASSWORD: ${PG_PASS:?database password required}
+        networks:
+            - authentik_server
+        ports:
+            - ${AUTHENTIK_POSTGRESQL_PORT}:5432
+        volumes:
+            - authentik_postgresql_data:/var/lib/postgresql/data
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}",
+                ]
+            start_period: 20s
+            interval: 30s
+            retries: 5
+            timeout: 5s
+        restart: unless-stopped
+
+    # ----------------------
+    # REDIS
+    # ----------------------
+    authentik-redis:
+        image: docker.io/library/redis:alpine
+        container_name: authentik-redis
+        user: root
+        networks:
+            - authentik_server
+        ports:
+            - ${AUTHENTIK_REDIS_PORT}:6379
+        volumes:
+            - authentik_redis_data:/data
+        healthcheck:
+            test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+            start_period: 20s
+            interval: 30s
+            retries: 5
+            timeout: 3s
+        restart: unless-stopped
+
+    # ----------------------
+    # AUTHENTIK SERVER
+    # ----------------------
+    authentik-server:
+        image: ghcr.io/goauthentik/server:2025.10.2
+        container_name: authentik-server
+        user: ${PUID}:${PGID}
+        environment:
+            AUTHENTIK_REDIS__HOST: authentik-redis
+            AUTHENTIK_POSTGRESQL__HOST: authentik-postgresql
+            AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+            AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+            AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+
+            AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+            AUTHENTIK_ERROR_REPORTING__ENABLED: ${AUTHENTIK_ERROR_REPORTING__ENABLED}
+
+            AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL__HOST}
+            AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL__PORT}
+            AUTHENTIK_EMAIL__USERNAME: ${AUTHENTIK_EMAIL__USERNAME}
+            AUTHENTIK_EMAIL__PASSWORD: ${AUTHENTIK_EMAIL__PASSWORD}
+            AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL__USE_TLS}
+            AUTHENTIK_EMAIL__USE_SSL: ${AUTHENTIK_EMAIL__USE_SSL}
+            AUTHENTIK_EMAIL__TIMEOUT: ${AUTHENTIK_EMAIL__TIMEOUT}
+            AUTHENTIK_EMAIL__FROM: ${AUTHENTIK_EMAIL__FROM}
+        networks:
+            - authentik_server
+            - traefik_proxy
+        ports:
+            - ${AUTHENTIK_SERVER_PORT}:9000
+        volumes:
+            - /srv/docker/authentik/media:/media
+            - /srv/docker/authentik/templates:/templates
+        command: server
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+
+            traefik.http.routers.authentik.service: authentik
+            traefik.http.routers.authentik.rule: Host(`auth.${DOMAIN}`)
+            traefik.http.routers.authentik.entrypoints: websecure
+            traefik.http.routers.authentik.tls.certresolver: myresolver
+            traefik.http.services.authentik.loadbalancer.server.port: 9000
+
+            traefik.http.routers.authentik-output.service: authentik-output
+            traefik.http.routers.authentik-output.rule: HostRegexp(`{subdomain:[a-z0-9-]+}.${DOMAIN}`) && PathPrefix(`/outpost.goauthentik.io`)
+            traefik.http.routers.authentik-output.entrypoints: websecure
+            traefik.http.routers.authentik-output.tls.certresolver: myresolver
+            traefik.http.services.authentik-output.loadbalancer.server.port: 9000
+        depends_on:
+            authentik-postgresql:
+                condition: service_healthy
+            authentik-redis:
+                condition: service_healthy
+        restart: unless-stopped
+
+    # ----------------------
+    # AUTHENTIK WORKER
+    # ----------------------
+    authentik-worker:
+        image: ghcr.io/goauthentik/server:2025.10.2
+        container_name: authentik-worker
+        user: ${PUID}:${PGID}
+        environment:
+            AUTHENTIK_REDIS__HOST: authentik-redis
+            AUTHENTIK_POSTGRESQL__HOST: authentik-postgresql
+            AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+            AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+            AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+
+            AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+            AUTHENTIK_ERROR_REPORTING__ENABLED: ${AUTHENTIK_ERROR_REPORTING__ENABLED}
+
+            AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL__HOST}
+            AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL__PORT}
+            AUTHENTIK_EMAIL__USERNAME: ${AUTHENTIK_EMAIL__USERNAME}
+            AUTHENTIK_EMAIL__PASSWORD: ${AUTHENTIK_EMAIL__PASSWORD}
+            AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL__USE_TLS}
+            AUTHENTIK_EMAIL__USE_SSL: ${AUTHENTIK_EMAIL__USE_SSL}
+            AUTHENTIK_EMAIL__TIMEOUT: ${AUTHENTIK_EMAIL__TIMEOUT}
+            AUTHENTIK_EMAIL__FROM: ${AUTHENTIK_EMAIL__FROM}
+        networks:
+            - authentik_server
+            - docker_socket_proxy
+        volumes:
+            - /srv/docker/authentik/media:/media
+            - /srv/docker/authentik/templates:/templates
+            - /srv/docker/authentik/certs:/certs
+        command: worker
+        restart: unless-stopped
+        depends_on:
+            authentik-postgresql:
+                condition: service_healthy
+            authentik-redis:
+                condition: service_healthy

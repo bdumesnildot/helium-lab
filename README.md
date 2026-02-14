@@ -2,60 +2,89 @@
 
 This home server setup provides a collection of self-hosted services for media streaming, authentication, and emulation. It uses **Docker Compose** to manage and deploy the services efficiently.
 
+<br>
+
 ## SERVICES
 
-### TRAEFIK 🚦
+#### 🚦 Reverse Proxy and SSL
 
 - **[Traefik](https://traefik.io/)**: Reverse proxy with SSL support for managing and securing your web services.
 
-### DOCKER 🐳
+#### 🧰 Security & Utils
 
 - **[Docker socket proxy](https://docs.linuxserver.io/images/docker-socket-proxy/)**: Security-enhanced proxy which allows you to apply access rules to the Docker socket
+- **[Gluetun](https://github.com/qdm12/gluetun)**: VPN client for routing traffic through a secure tunnel.
 
-### AUTH 🔐
+#### 🔐 Authentication
 
-- **[Authentik](https://goauthentik.io/)**: IdP (Identity Provider) and SSO (single sign on)
+- **[Authentik](https://goauthentik.io/)**: IdP (Identity Provider) and SSO (single sign on), solution for managing user access to your services.
 
-## PREREQUISITES
+#### 📥 Downloads
 
-- **Docker** & **Docker Compose**
-- **GNU Make**
-- **Bash**
+- **[qBittorrent](https://www.qbittorrent.org/)**: A powerful and user-friendly torrent client.
+- **[nzbget](https://nzbget.net/)**: A binary newsreader for downloading files from Usenet.
 
-## SETUP
+<br>
 
-1.  **Clone the repository**
+## QUICK START
+
+<br>
+
+0. **Prerequisites**:
+    - Docker & Docker Compose
+    - GNU Make
+    - Bash
+
+1. **Clone the repository**
 
     ```bash
     git clone <repository-url>
     cd <repository-directory>
     ```
 
-2.  **Initialize environment files**
+2. **Initialize environment files**
 
     ```bash
     make env
     ```
 
-    _Note: Edit the generated `.env` files in `docker/_/` before proceeding.\*
+    > **Note:** Edit the generated `.env` files in `docker/_/` before proceeding.\*
 
-3.  **Deploy services**
+3. **Deploy services**
     ```bash
     make up
     ```
-    _This automatically creates the required networks and starts all stacks in order._
-
+    > This automatically creates the required networks and starts all stacks in order.\_
 
 ## COMMANDS
 
-- `make up`: Start all stacks and create networks.
-- `make down`: Stop all stacks.
-- `make restart`: Restart all stacks.
-- `make pull`: Pull latest images.
-- `make ps`: Show status of all containers.
-- `make logs`: Tail logs for all containers.
-- `make env`: Initialize `.env` files from examples.
-- `make clean`: Stop all and remove networks.
+### Global Commands
+
+| Command         | Description                           |
+| :-------------- | :------------------------------------ |
+| `make up`       | Start all stacks in boot order        |
+| `make down`     | Stop all stacks in reverse order      |
+| `make restart`  | Restart all stacks                    |
+| `make ps`       | Show status of all services           |
+| `make logs`     | Tail logs for all services            |
+| `make pull`     | Pull latest images                    |
+| `make env`      | Initialize `.env` files from examples |
+| `make networks` | Create external Docker networks       |
+| `make clean`    | Stop stacks and remove networks       |
+| `make nuke`     | Clean + prune all Docker resources    |
+
+### Per-Stack Commands
+
+| Command                | Description                    |
+| :--------------------- | :----------------------------- |
+| `make up-<stack>`      | Start specific stack           |
+| `make down-<stack>`    | Stop specific stack            |
+| `make restart-<stack>` | Restart specific stack         |
+| `make logs-<stack>`    | Tail logs for specific stack   |
+| `make ps-<stack>`      | Show status of specific stack  |
+| `make pull-<stack>`    | Pull images for specific stack |
+
+> **Note:** For individual service management within a stack, use `docker compose` directly.
 
 <br>
 <br>

@@ -16,6 +16,8 @@ COMPOSE        := docker compose
 COMPOSE_FILE   := docker-compose.yml
 
 # Stacks in boot order (left → right). Shutdown is reversed automatically.
+# To add a new stack, just append its name here — per-stack targets are
+# generated automatically (up-<stack>, down-<stack>, restart-<stack>, …).
 STACKS := docker-utils reverse-proxy auth vpn downloads
 
 # External networks required by the stacks
@@ -75,7 +77,7 @@ networks-ls: ## List external networks and their status
 	done
 	@echo ""
 
-# ─── Stack Lifecycle ──────────────────────────────────────────
+# ─── Stack Lifecycle (all stacks) ────────────────────────────
 
 .PHONY: up down restart pull
 
@@ -106,8 +108,10 @@ pull: ## Pull latest images for all stacks
 	done
 
 # ─── Per-Stack Targets ───────────────────────────────────────
-# Generates: up-<stack>, down-<stack>, restart-<stack>,
-#            pull-<stack>, logs-<stack>, ps-<stack>
+# Auto-generated from STACKS. Adding a stack to STACKS is all
+# you need — the following targets are created for each stack:
+#   up-<stack>  down-<stack>  restart-<stack>
+#   pull-<stack>  logs-<stack>  ps-<stack>
 
 define STACK_TARGETS
 
@@ -127,7 +131,7 @@ pull-$(1): ## Pull latest images for $(1)
 	@echo "  ↓ $(1)"
 	@$$(call compose_cmd,$(1)) pull
 
-logs-$(1): ## Tail logs for $(1) (pass ARGS= for extra flags)
+logs-$(1): ## Tail logs for $(1) (ARGS= to filter by service)
 	@$$(call compose_cmd,$(1)) logs -f --tail=100 $$(ARGS)
 
 ps-$(1): ## Show status of $(1)
@@ -148,7 +152,7 @@ ps: ## Show status of all stacks
 		echo ""; \
 	done
 
-logs: ## Tail logs for all stacks (pass ARGS= for extra flags)
+logs: ## Tail logs for all stacks (ARGS= to filter by service)
 	@for stack in $(STACKS); do \
 		echo "━━━ $$stack ━━━"; \
 		$(call compose_cmd,$$stack) logs -f --tail=50 $(ARGS) & \
@@ -221,6 +225,12 @@ help: ## Show this help
 			printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2 \
 		}' $(MAKEFILE_LIST)
 	@echo ""
-	@echo "  Tip: pass extra args to log targets with ARGS="
-	@echo "       e.g.  make logs-reverse-proxy ARGS='traefik'"
+	@echo "  Per-stack targets are auto-generated from STACKS:"
+	@echo "    up-<stack>  down-<stack>  restart-<stack>  pull-<stack>  logs-<stack>  ps-<stack>"
+	@echo ""
+	@echo "  Examples:"
+	@echo "    make up-vpn                            Start only the vpn stack"
+	@echo "    make restart-auth                      Restart the auth stack"
+	@echo "    make logs-reverse-proxy                Tail all logs for reverse-proxy"
+	@echo "    make logs-auth ARGS='authentik-server'  Tail logs for a specific service"
 	@echo ""

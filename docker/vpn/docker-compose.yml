@@ -1,0 +1,55 @@
+# VPN client
+
+volumes:
+    server_vpn_gluetun_data:
+
+networks:
+    traefik_proxy:
+        external: true
+
+services:
+    # ----------------------------------------
+    # GLUETUN
+    # Vpn client
+    # ----------------------------------------
+    gluetun:
+        image: qmcgaw/gluetun
+        container_name: gluetun
+        user: root
+        cap_add:
+            - NET_ADMIN
+        environment:
+            TZ: ${TZ}
+            VPN_SERVICE_PROVIDER: ${VPN_PROVIDER}
+            OPENVPN_USER: ${VPN_USER}
+            OPENVPN_PASSWORD: ${VPN_PASSWORD}
+            SERVER_REGIONS: ${VPN_REGIONS}
+            DOT: on
+            DOT_PROVIDERS: cloudflare
+        networks:
+            - traefik_proxy
+        ports:
+            - ${QBITTORRENT_PORT}:8888 # qbittorrent
+            - ${NZBGET_PORT}:6789 # nzbget
+        volumes:
+            - server_vpn_gluetun_data:/gluetun
+        devices:
+            - /dev/net/tun:/dev/net/tun
+        labels:
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            # -- qbittorrent
+            traefik.http.routers.qbittorrent.service: qbittorrent
+            traefik.http.routers.qbittorrent.rule: Host(`qbittorrent.${DOMAIN}`)
+            traefik.http.routers.qbittorrent.entrypoints: websecure
+            traefik.http.routers.qbittorrent.tls.certresolver: myresolver
+            traefik.http.services.qbittorrent.loadbalancer.server.port: 8888
+            traefik.http.routers.qbittorrent.middlewares: authentik-auth
+            # -- nzbget
+            traefik.http.routers.nzbget.service: nzbget
+            traefik.http.routers.nzbget.rule: Host(`nzbget.${DOMAIN}`)
+            traefik.http.routers.nzbget.entrypoints: websecure
+            traefik.http.routers.nzbget.tls.certresolver: myresolver
+            traefik.http.services.nzbget.loadbalancer.server.port: 6789
+            traefik.http.routers.nzbget.middlewares: authentik-auth
+        restart: unless-stopped

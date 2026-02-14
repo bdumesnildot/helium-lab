@@ -8,3 +8,6 @@ DS_Store
 
 # Dependency directories
 node_modules/
+
+# Temporary files
+.tmp/

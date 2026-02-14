@@ -16,7 +16,7 @@ COMPOSE        := docker compose
 COMPOSE_FILE   := docker-compose.yml
 
 # Stacks in boot order (left → right). Shutdown is reversed automatically.
-STACKS := docker-utils reverse-proxy auth
+STACKS := docker-utils reverse-proxy auth vpn downloads
 
 # External networks required by the stacks
 NETWORKS := docker_socket_proxy traefik_proxy

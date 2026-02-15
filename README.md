@@ -28,8 +28,6 @@ This home server setup provides a collection of self-hosted services for media s
 
 ## QUICK START
 
-<br>
-
 0. **Prerequisites**:
     - Docker & Docker Compose
     - GNU Make
@@ -55,6 +53,8 @@ This home server setup provides a collection of self-hosted services for media s
     make up
     ```
     > This automatically creates the required networks and starts all stacks in order.\_
+
+<br>
 
 ## COMMANDS
 

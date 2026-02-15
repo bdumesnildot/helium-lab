@@ -24,13 +24,23 @@ services:
             OPENVPN_USER: ${VPN_USER}
             OPENVPN_PASSWORD: ${VPN_PASSWORD}
             SERVER_REGIONS: ${VPN_REGIONS}
-            DOT: on
-            DOT_PROVIDERS: cloudflare
+            DNS_SERVER: on
+            DNS_UPSTREAM_RESOLVERS: cloudflare
+            VPN_PORT_FORWARDING: on
+            HTTP_CONTROL_SERVER_AUTH_CONFIG_FILEPATH: /gluetun/auth/config.toml
+        entrypoint: >
+            sh -c "mkdir -p /gluetun/auth &&
+            echo '[[roles]]' > /gluetun/auth/config.toml &&
+            echo 'name = \"sync-mod\"' >> /gluetun/auth/config.toml &&
+            echo 'routes = [\"GET /v1/portforward\"]' >> /gluetun/auth/config.toml &&
+            echo 'auth = \"apikey\"' >> /gluetun/auth/config.toml &&
+            echo 'apikey = \"${GSP_GTN_API_KEY}\"' >> /gluetun/auth/config.toml &&
+            exec /gluetun-entrypoint"
         networks:
             - traefik_proxy
         ports:
-            - ${QBITTORRENT_PORT}:8888 # qbittorrent
-            - ${NZBGET_PORT}:6789 # nzbget
+            - ${QBITTORRENT_PORT}:8888
+            - ${NZBGET_PORT}:6789
         volumes:
             - server_vpn_gluetun_data:/gluetun
         devices:

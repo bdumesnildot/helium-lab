@@ -159,3 +159,23 @@ services:
                 condition: service_healthy
             authentik-redis:
                 condition: service_healthy
+
+    # ----------------------
+    # AUTHENTIK LDAP OUTPOST
+    # ----------------------
+    authentik-ldap:
+        image: ghcr.io/goauthentik/ldap:2025.10.2
+        container_name: authentik-ldap
+        environment:
+            AUTHENTIK_HOST: http://authentik-server:${AUTHENTIK_SERVER_PORT}
+            AUTHENTIK_INSECURE: "true"
+            AUTHENTIK_TOKEN: ${AUTHENTIK_LDAP_TOKEN}
+        networks:
+            - authentik_server
+            - traefik_proxy
+        ports:
+            - ${AUTHENTIK_LDAP_PORT}:3389
+            - ${AUTHENTIK_LDAPS_PORT}:6636
+        restart: unless-stopped
+        depends_on:
+            - authentik-server

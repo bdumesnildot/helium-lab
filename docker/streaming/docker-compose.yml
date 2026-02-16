@@ -1,0 +1,184 @@
+# STREAMING MEDIA MANAGEMENT
+
+networks:
+    traefik_proxy:
+        external: true
+    prowlarr:
+
+services:
+    # ----------------------------------------
+    # PROWLARR
+    # Index management
+    #
+    # FLARESOLVER
+    # a proxy server to bypass Cloudflare and DDoS-GUARD protection
+    # ----------------------------------------
+    prowlarr:
+        image: lscr.io/linuxserver/prowlarr:latest
+        container_name: prowlarr
+        environment:
+            TZ: ${TZ}
+            PUID: ${PUID}
+            PGID: ${PGID}
+        networks:
+            - traefik_proxy
+            - prowlarr
+        ports:
+            - ${PROWLARR_PORT}:9696
+        volumes:
+            - /srv/docker/prowlarr/config:/config
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            traefik.http.routers.prowlarr.rule: Host(`prowlarr.${DOMAIN}`)
+            traefik.http.routers.prowlarr.entrypoints: websecure
+            traefik.http.routers.prowlarr.tls.certresolver: myresolver
+            traefik.http.routers.prowlarr.middlewares: authentik-auth
+        restart: unless-stopped
+
+    flaresolverr:
+        # image: flaresolverr/flaresolverr:latest
+        image: alexfozor/flaresolverr:pr-1300-experimental
+        container_name: flaresolverr
+        user: root
+        environment:
+            LOG_LEVEL: info
+            TZ: ${TZ}
+            LANG: en_GB
+            CAPTCHA_SOLVER: none
+            HEADLESS: true
+        networks:
+            - prowlarr
+        ports:
+            - ${PROWLARR_FLARESOLVER_PORT}:8191
+            - ${PROWLARR_FLARESOLVER_PROMETHEUS_PORT}:8191
+        restart: unless-stopped
+
+    byparr:
+        image: ghcr.io/thephaseless/byparr:latest
+        container_name: byparr
+        networks:
+            - prowlarr
+        ports:
+            - ${PROWLARR_BYPARR_PORT}:8191
+        shm_size: 2gb
+        restart: unless-stopped
+
+    # ----------------------------------------
+    # SONARR
+    # TV Series Management
+    # ----------------------------------------
+    sonarr:
+        image: lscr.io/linuxserver/sonarr:latest
+        container_name: sonarr
+        environment:
+            TZ: ${TZ}
+            PUID: ${PUID}
+            PGID: ${PGID}
+        networks:
+            - traefik_proxy
+        ports:
+            - ${SONARR_PORT}:8989
+        volumes:
+            - /srv/docker/sonarr/config:/config
+            - ${MEDIA_PATH}:/downloads
+            - ${MEDIA_UNIFIED_PATH}/series:/tv
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            traefik.http.routers.sonarr.rule: Host(`sonarr.${DOMAIN}`)
+            traefik.http.routers.sonarr.entrypoints: websecure
+            traefik.http.routers.sonarr.tls.certresolver: myresolver
+            traefik.http.routers.sonarr.middlewares: authentik-auth
+        restart: unless-stopped
+
+    # ----------------------------------------
+    # RADARR
+    # Movies Management
+    # ----------------------------------------
+    radarr:
+        image: lscr.io/linuxserver/radarr:latest
+        container_name: radarr
+        environment:
+            TZ: ${TZ}
+            PUID: ${PUID}
+            PGID: ${PGID}
+        networks:
+            - traefik_proxy
+        ports:
+            - ${RADARR_PORT}:7878
+        volumes:
+            - /srv/docker/radarr/config:/config
+            - ${MEDIA_PATH}:/downloads
+            - ${MEDIA_UNIFIED_PATH}/movies:/movies
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            traefik.http.routers.radarr.rule: Host(`radarr.${DOMAIN}`)
+            traefik.http.routers.radarr.entrypoints: websecure
+            traefik.http.routers.radarr.tls.certresolver: myresolver
+            traefik.http.routers.radarr.middlewares: authentik-auth
+        restart: unless-stopped
+
+    # ----------------------------------------
+    # OVERSEER
+    # Request management and media discovery tool
+    # ----------------------------------------
+    # overseerr:
+    #     image: lscr.io/linuxserver/overseerr:latest
+    #     container_name: overseerr
+    #     environment:
+    #         TZ: ${TZ}
+    #         PUID: ${PUID}
+    #         PGID: ${PGID}
+    #     networks:
+    #         - traefik_proxy
+    #     ports:
+    #         - ${OVERSEERR_PORT}:5055
+    #     volumes:
+    #         - /srv/docker/overseerr/config:/config
+    #     labels:
+    #         # -- traefik
+    #         traefik.enable: true
+    #         traefik.docker.network: traefik_proxy
+    #         traefik.http.routers.overseerr.rule: Host(`overseerr.${DOMAIN}`)
+    #         traefik.http.routers.overseerr.entrypoints: websecure
+    #         traefik.http.routers.overseerr.tls.certresolver: myresolver
+    #         traefik.http.routers.overseerr.middlewares: authentik-auth
+    #     restart: unless-stopped
+
+    # ----------------------------------------
+    # JELLYFIN
+    # An alternative to Plex
+    # ----------------------------------------
+    jellyfin:
+        image: lscr.io/linuxserver/jellyfin:latest
+        container_name: jellyfin
+        environment:
+            TZ: ${TZ}
+            PUID: ${PUID}
+            PGID: ${PGID}
+            JELLYFIN_PublishedServerUrl: https://jellyfin.${DOMAIN}
+        networks:
+            - traefik_proxy
+        ports:
+            - ${JELLYFIN_PORT}:8096
+            - 7359:7359/udp
+            - 1900:1900/udp
+        volumes:
+            - /srv/docker/jellyfin/config:/config
+            - ${MEDIA_UNIFIED_PATH}/series:/data/tvshows
+            - ${MEDIA_UNIFIED_PATH}/movies:/data/movies
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.http.routers.jellyfin.rule: Host(`jellyfin.${DOMAIN}`)
+            traefik.http.routers.jellyfin.entrypoints: websecure
+            traefik.http.routers.jellyfin.tls.certresolver: myresolver
+            traefik.http.services.jellyfin.loadbalancer.server.port: 8096
+            # -- auth: forward auth is disabled for now to prefer a LDAP settings in jellyfin and allow mobile app access
+            # traefik.http.routers.jellyfin.middlewares: authentik-auth
+        restart: unless-stopped

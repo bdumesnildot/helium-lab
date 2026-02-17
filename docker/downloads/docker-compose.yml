@@ -20,6 +20,8 @@ services:
         volumes:
             - /srv/docker/qbittorrent/config:/config
             - ${MEDIA_PATH}/torrents/completed:/downloads
+        labels:
+            docker-volume-backup.stop-during-backup: qbittorrent-service
         restart: unless-stopped
 
     # ----------------------------------------

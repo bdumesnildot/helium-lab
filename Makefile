@@ -18,7 +18,10 @@ COMPOSE_FILE   := docker-compose.yml
 # Stacks in boot order (left → right). Shutdown is reversed automatically.
 # To add a new stack, just append its name here — per-stack targets are
 # generated automatically (up-<stack>, down-<stack>, restart-<stack>, …).
-STACKS := docker-utils reverse-proxy auth vpn streaming downloads
+STACKS := docker-utils reverse-proxy auth vpn streaming downloads backups
+
+# External volumes required by the stacks
+VOLUMES := authentik_postgresql_dumps
 
 # External networks required by the stacks
 NETWORKS := docker_socket_proxy traefik_proxy
@@ -77,11 +80,52 @@ networks-ls: ## List external networks and their status
 	done
 	@echo ""
 
+# ─── Volume Management ───────────────────────────────────────
+
+.PHONY: volumes volumes-create volumes-remove volumes-ls
+
+volumes: volumes-create ## Alias for volumes-create
+
+volumes-create: ## Create all external Docker volumes
+	@echo "━━━ Creating external volumes ━━━"
+	@for vol in $(VOLUMES); do \
+		if docker volume inspect $$vol >/dev/null 2>&1; then \
+			echo "  ✓ $$vol (already exists)"; \
+		else \
+			docker volume create $$vol >/dev/null && \
+			echo "  + $$vol (created)"; \
+		fi; \
+	done
+	@echo ""
+
+volumes-remove: ## Remove all external Docker volumes
+	@echo "━━━ Removing external volumes ━━━"
+	@for vol in $(VOLUMES); do \
+		if docker volume inspect $$vol >/dev/null 2>&1; then \
+			docker volume rm $$vol >/dev/null && \
+			echo "  - $$vol (removed)"; \
+		else \
+			echo "  · $$vol (not found)"; \
+		fi; \
+	done
+	@echo ""
+
+volumes-ls: ## List external volumes and their status
+	@echo "━━━ External volume status ━━━"
+	@for vol in $(VOLUMES); do \
+		if docker volume inspect $$vol >/dev/null 2>&1; then \
+			echo "  ● $$vol"; \
+		else \
+			echo "  ○ $$vol (missing)"; \
+		fi; \
+	done
+	@echo ""
+
 # ─── Stack Lifecycle (all stacks) ────────────────────────────
 
 .PHONY: up down restart pull
 
-up: networks-create ## Start all stacks (in boot order)
+up: networks-create volumes-create ## Start all stacks (in boot order)
 	@echo "━━━ Starting all stacks ━━━"
 	@for stack in $(STACKS); do \
 		echo "  ▶ $$stack"; \
@@ -117,7 +161,7 @@ define STACK_TARGETS
 
 .PHONY: up-$(1) down-$(1) restart-$(1) pull-$(1) logs-$(1) ps-$(1)
 
-up-$(1): networks-create ## Start $(1)
+up-$(1): networks-create volumes-create ## Start $(1)
 	@echo "  ▶ $(1)"
 	@$$(call compose_cmd,$(1)) up -d --remove-orphans
 
@@ -197,7 +241,7 @@ env-check: ## Verify every stack with an .env.example has a matching .env
 
 .PHONY: clean nuke
 
-clean: down networks-remove ## Stop everything and remove external networks
+clean: down networks-remove volumes-remove ## Stop everything and remove external networks and volumes
 	@echo "✔ Clean complete"
 
 nuke: clean ## Clean + prune unused Docker resources (volumes, images, networks)
@@ -217,6 +261,7 @@ help: ## Show this help
 	@echo ""
 	@echo "  Stacks (boot order): $(STACKS)"
 	@echo "  Networks:            $(NETWORKS)"
+	@echo "  Volumes:             $(VOLUMES)"
 	@echo ""
 	@echo "  Usage: make <target>"
 	@echo ""

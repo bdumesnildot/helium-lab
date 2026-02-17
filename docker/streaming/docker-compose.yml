@@ -35,6 +35,8 @@ services:
             traefik.http.routers.prowlarr.entrypoints: websecure
             traefik.http.routers.prowlarr.tls.certresolver: myresolver
             traefik.http.routers.prowlarr.middlewares: authentik-auth
+            # -- backup
+            docker-volume-backup.stop-during-backup: prowlarr-service
         restart: unless-stopped
 
     flaresolverr:
@@ -92,6 +94,8 @@ services:
             traefik.http.routers.sonarr.entrypoints: websecure
             traefik.http.routers.sonarr.tls.certresolver: myresolver
             traefik.http.routers.sonarr.middlewares: authentik-auth
+            # -- backup
+            docker-volume-backup.stop-during-backup: sonarr-service
         restart: unless-stopped
 
     # ----------------------------------------
@@ -121,6 +125,8 @@ services:
             traefik.http.routers.radarr.entrypoints: websecure
             traefik.http.routers.radarr.tls.certresolver: myresolver
             traefik.http.routers.radarr.middlewares: authentik-auth
+            # -- backup
+            docker-volume-backup.stop-during-backup: radarr-service
         restart: unless-stopped
 
     # ----------------------------------------
@@ -148,6 +154,8 @@ services:
     #         traefik.http.routers.overseerr.entrypoints: websecure
     #         traefik.http.routers.overseerr.tls.certresolver: myresolver
     #         traefik.http.routers.overseerr.middlewares: authentik-auth
+    #         # -- backup
+    #         docker-volume-backup.stop-during-backup: overseerr-service
     #     restart: unless-stopped
 
     # ----------------------------------------
@@ -179,6 +187,7 @@ services:
             traefik.http.routers.jellyfin.entrypoints: websecure
             traefik.http.routers.jellyfin.tls.certresolver: myresolver
             traefik.http.services.jellyfin.loadbalancer.server.port: 8096
-            # -- auth: forward auth is disabled for now to prefer a LDAP settings in jellyfin and allow mobile app access
-            # traefik.http.routers.jellyfin.middlewares: authentik-auth
+            # traefik.http.routers.jellyfin.middlewares: authentik-auth // forward auth is disabled for now to prefer a LDAP settings in jellyfin and allow mobile app access
+            # -- backup
+            docker-volume-backup.stop-during-backup: jellyfin-service
         restart: unless-stopped

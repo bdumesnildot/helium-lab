@@ -2,6 +2,8 @@
 
 volumes:
     authentik_postgresql_data:
+    authentik_postgresql_dumps:
+        external: true
     authentik_redis_data:
 
 networks:
@@ -30,6 +32,11 @@ services:
             - ${AUTHENTIK_POSTGRESQL_PORT}:5432
         volumes:
             - authentik_postgresql_data:/var/lib/postgresql/data
+            - authentik_postgresql_dumps:/tmp/dumps
+            - ../backup/scripts/postgres-backup.sh:/postgres-backup.sh:ro
+        labels:
+            docker-volume-backup.exec-label: authentik-postgresql
+            docker-volume-backup.archive-pre: sh -c '/postgres-backup.sh'
         healthcheck:
             test:
                 [
@@ -96,6 +103,7 @@ services:
         volumes:
             - /srv/docker/authentik/media:/media
             - /srv/docker/authentik/templates:/templates
+            - /srv/docker/authentik/certs:/certs
         command: server
         labels:
             # -- traefik
@@ -113,6 +121,8 @@ services:
             traefik.http.routers.authentik-output.entrypoints: websecure
             traefik.http.routers.authentik-output.tls.certresolver: myresolver
             traefik.http.services.authentik-output.loadbalancer.server.port: 9000
+            # -- backup
+            docker-volume-backup.stop-during-backup: authentik-server-service
         depends_on:
             authentik-postgresql:
                 condition: service_healthy

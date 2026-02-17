@@ -1,0 +1,48 @@
+# BACKUP
+
+volumes:
+    authentik_postgresql_dumps:
+        external: true
+
+networks:
+    docker_socket_proxy:
+        external: true
+
+services:
+    # ----------------------------------------
+    # DOCKER VOLUME BACKUP
+    # Backup Docker volumes locally or to compatible storage
+    # documentation: https://offen.github.io/docker-volume-backup/
+    # ----------------------------------------
+    docker-volume-backup:
+        image: offen/docker-volume-backup:latest
+        container_name: docker-volume-backup
+        user: root
+        environment:
+            NOTIFICATION_LEVEL: info
+            GPG_PASSPHRASE: ${GPG_PASSPHRASE}
+            NOTIFICATION_URLS: ${BACKUP_BACKUP_NOTIFICATION_URLS}
+            DOCKER_HOST: tcp://socket-proxy:${SOCKET_PROXY_PORT}
+        networks:
+            - docker_socket_proxy
+        volumes:
+            # -- backup config
+            - ./backup-volume-docker:/etc/dockervolumebackup/conf.d
+
+            # -- services volumes to backup (sources)
+            # auth
+            - authentik_postgresql_dumps:/backup/authentik-postgresql-dump:ro
+            - /srv/docker/authentik/media:/backup/authentik-server-media:ro
+            - /srv/docker/authentik/templates:/backup/authentik-server-templates:ro
+            - /srv/docker/authentik/certs:/backup/authentik-server-certs:ro
+            # streaming
+            - /srv/docker/prowlarr/config:/backup/prowlarr-config:ro
+            - /srv/docker/sonarr/config:/backup/sonarr-config:ro
+            - /srv/docker/radarr/config:/backup/radarr-config:ro
+            - /srv/docker/jellyfin/config:/backup/jellyfin-config:ro
+            # downloads
+            - /srv/docker/qbittorrent/config/:/backup/qbittorrent-config:ro
+
+            # -- path to local backup (destination)
+            - ${LOCAL_BACKUPS_PATH}/docker-volume-backup:/archive
+        restart: unless-stopped

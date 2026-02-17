@@ -167,12 +167,14 @@ services:
         image: ghcr.io/goauthentik/ldap:2025.10.2
         container_name: authentik-ldap
         environment:
-            AUTHENTIK_HOST: http://authentik-server:${AUTHENTIK_SERVER_PORT}
-            AUTHENTIK_INSECURE: "true"
+            AUTHENTIK_HOST: http://authentik-server:9000
+            AUTHENTIK_INSECURE: "false"
             AUTHENTIK_TOKEN: ${AUTHENTIK_LDAP_TOKEN}
         networks:
             - authentik_server
             - traefik_proxy
+        volumes:
+            - /srv/docker/authentik/certs:/certs
         ports:
             - ${AUTHENTIK_LDAP_PORT}:3389
             - ${AUTHENTIK_LDAPS_PORT}:6636

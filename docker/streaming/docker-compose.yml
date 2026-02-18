@@ -1,9 +1,15 @@
 # STREAMING MEDIA MANAGEMENT
+#
+volumes:
+    riven_postgresql_data:
+    riven_postgresql_dumps:
+        external: true
 
 networks:
     traefik_proxy:
         external: true
     prowlarr:
+    riven:
 
 services:
     # ----------------------------------------
@@ -16,6 +22,7 @@ services:
     prowlarr:
         image: lscr.io/linuxserver/prowlarr:latest
         container_name: prowlarr
+        tty: true
         environment:
             TZ: ${TZ}
             PUID: ${PUID}
@@ -74,6 +81,7 @@ services:
     sonarr:
         image: lscr.io/linuxserver/sonarr:latest
         container_name: sonarr
+        tty: true
         environment:
             TZ: ${TZ}
             PUID: ${PUID}
@@ -105,6 +113,7 @@ services:
     radarr:
         image: lscr.io/linuxserver/radarr:latest
         container_name: radarr
+        tty: true
         environment:
             TZ: ${TZ}
             PUID: ${PUID}
@@ -130,33 +139,106 @@ services:
         restart: unless-stopped
 
     # ----------------------------------------
-    # OVERSEER
-    # Request management and media discovery tool
+    # RIVEN
+    # Torrent streaming through Debrid
     # ----------------------------------------
-    # overseerr:
-    #     image: lscr.io/linuxserver/overseerr:latest
-    #     container_name: overseerr
-    #     environment:
-    #         TZ: ${TZ}
-    #         PUID: ${PUID}
-    #         PGID: ${PGID}
-    #     networks:
-    #         - traefik_proxy
-    #     ports:
-    #         - ${OVERSEERR_PORT}:5055
-    #     volumes:
-    #         - /srv/docker/overseerr/config:/config
-    #     labels:
-    #         # -- traefik
-    #         traefik.enable: true
-    #         traefik.docker.network: traefik_proxy
-    #         traefik.http.routers.overseerr.rule: Host(`overseerr.${DOMAIN}`)
-    #         traefik.http.routers.overseerr.entrypoints: websecure
-    #         traefik.http.routers.overseerr.tls.certresolver: myresolver
-    #         traefik.http.routers.overseerr.middlewares: authentik-auth
-    #         # -- backup
-    #         docker-volume-backup.stop-during-backup: overseerr-service
-    #     restart: unless-stopped
+    riven-frontend:
+        image: spoked/riven-frontend:latest
+        container_name: riven-frontend
+        user: ${PUID}:${PGID}
+        tty: true
+        environment:
+            TZ: ${TZ}
+        networks:
+            - traefik_proxy
+            - riven
+        ports:
+            - ${RIVEN_FRONTEND_PORT}:3000
+        volumes:
+            - /srv/docker/riven/frontend/config:/riven/config
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            traefik.http.routers.riven.rule: Host(`riven.${DOMAIN}`)
+            traefik.http.routers.riven.entrypoints: websecure
+            traefik.http.routers.riven.tls.certresolver: myresolver
+            traefik.http.routers.riven.middlewares: authentik-auth
+            # -- backup
+            docker-volume-backup.stop-during-backup: riven-service
+        restart: unless-stopped
+        depends_on:
+            riven:
+                condition: service_started
+
+    riven:
+        image: spoked/riven:latest
+        container_name: riven
+        tty: true
+        cap_add:
+            - SYS_ADMIN
+        security_opt:
+            - apparmor:unconfined
+        shm_size: 1024m
+        devices:
+            - /dev/fuse
+        environment:
+            PUID: ${PUID}
+            PGID: ${PGID}
+            TZ: ${TZ}
+            RIVEN_FORCE_ENV: true
+            RIVEN_DATABASE_HOST: postgresql+psycopg2://${RIVEN_POSTGRES_USER}:${RIVEN_POSTGRES_PASSWORD}@riven-db/${RIVEN_POSTGRES_DB}
+        networks:
+            - traefik_proxy
+            - riven
+            - prowlarr
+        ports:
+            - ${RIVEN_BACKEND_PORT}:8080
+        volumes:
+            - /srv/docker/riven/backend/data:/riven/data
+            - ${MEDIA_UNIFIED_PATH}/riven:/mount:rshared,z
+        labels:
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            traefik.http.routers.riven-backend.rule: Host(`riven-api.${DOMAIN}`)
+            traefik.http.routers.riven-backend.entrypoints: websecure
+            traefik.http.routers.riven-backend.tls.certresolver: myresolver
+            traefik.http.services.riven-backend.loadbalancer.server.port: 8080
+        healthcheck:
+            test: curl -s http://localhost:8080 >/dev/null || exit 1
+            interval: 30s
+            timeout: 10s
+            retries: 10
+        restart: unless-stopped
+        depends_on:
+            riven-postgres:
+                condition: service_healthy
+
+    riven-postgres:
+        image: postgres:17-alpine
+        container_name: riven-db
+        user: root
+        environment:
+            POSTGRES_USER: ${RIVEN_POSTGRES_USER}
+            POSTGRES_PASSWORD: ${RIVEN_POSTGRES_PASSWORD}
+            POSTGRES_DB: ${RIVEN_POSTGRES_DB}
+            # path config
+            PGDATA: /var/lib/postgresql/data/pgdata
+        networks:
+            - riven
+        volumes:
+            - riven_postgresql_data:/var/lib/postgresql/data/pgdata
+            - riven_postgresql_dumps:/tmp/dumps
+            - ../backup/scripts/postgres-backup.sh:/postgres-backup.sh:ro
+        labels:
+            docker-volume-backup.exec-label: riven-postgresql
+            docker-volume-backup.archive-pre: sh -c '/postgres-backup.sh'
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        restart: unless-stopped
 
     # ----------------------------------------
     # JELLYFIN
@@ -165,6 +247,7 @@ services:
     jellyfin:
         image: lscr.io/linuxserver/jellyfin:latest
         container_name: jellyfin
+        tty: true
         environment:
             TZ: ${TZ}
             PUID: ${PUID}
@@ -180,6 +263,7 @@ services:
             - /srv/docker/jellyfin/config:/config
             - ${MEDIA_UNIFIED_PATH}/series:/data/tvshows
             - ${MEDIA_UNIFIED_PATH}/movies:/data/movies
+            - ${MEDIA_UNIFIED_PATH}/riven:/mount:rslave,z
         labels:
             # -- traefik
             traefik.enable: true

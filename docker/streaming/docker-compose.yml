@@ -213,7 +213,7 @@ services:
             retries: 10
         restart: unless-stopped
         depends_on:
-            riven-postgres:
+            riven-postgresql:
                 condition: service_healthy
 
     riven-postgresql:

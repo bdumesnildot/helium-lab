@@ -165,7 +165,7 @@ services:
             traefik.http.routers.riven.tls.certresolver: myresolver
             traefik.http.routers.riven.middlewares: authentik-auth
             # -- backup
-            docker-volume-backup.stop-during-backup: riven-service
+            docker-volume-backup.stop-during-backup: riven-frontend-service
         restart: unless-stopped
         depends_on:
             riven:
@@ -204,6 +204,8 @@ services:
             traefik.http.routers.riven-backend.entrypoints: websecure
             traefik.http.routers.riven-backend.tls.certresolver: myresolver
             traefik.http.services.riven-backend.loadbalancer.server.port: 8080
+            # -- backup
+            docker-volume-backup.stop-during-backup: riven-service
         healthcheck:
             test: curl -s http://localhost:8080 >/dev/null || exit 1
             interval: 30s
@@ -214,9 +216,9 @@ services:
             riven-postgres:
                 condition: service_healthy
 
-    riven-postgres:
+    riven-postgresql:
         image: postgres:17-alpine
-        container_name: riven-db
+        container_name: riven-postgresql
         user: root
         environment:
             POSTGRES_USER: ${RIVEN_POSTGRES_USER}
@@ -229,7 +231,7 @@ services:
         volumes:
             - riven_postgresql_data:/var/lib/postgresql/data/pgdata
             - riven_postgresql_dumps:/tmp/dumps
-            - ../backup/scripts/postgres-backup.sh:/postgres-backup.sh:ro
+            - ../backups/scripts/postgres-backup.sh:/postgres-backup.sh:ro
         labels:
             docker-volume-backup.exec-label: riven-postgresql
             docker-volume-backup.archive-pre: sh -c '/postgres-backup.sh'

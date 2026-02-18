@@ -33,7 +33,7 @@ services:
         volumes:
             - authentik_postgresql_data:/var/lib/postgresql/data
             - authentik_postgresql_dumps:/tmp/dumps
-            - ../backup/scripts/postgres-backup.sh:/postgres-backup.sh:ro
+            - ../backups/scripts/postgres-backup.sh:/postgres-backup.sh:ro
         labels:
             docker-volume-backup.exec-label: authentik-postgresql
             docker-volume-backup.archive-pre: sh -c '/postgres-backup.sh'

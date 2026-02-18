@@ -23,8 +23,8 @@ services:
         environment:
             NOTIFICATION_LEVEL: info
             GPG_PASSPHRASE: ${GPG_PASSPHRASE}
-            NOTIFICATION_URLS: ${BACKUP_BACKUP_NOTIFICATION_URLS}
             DOCKER_HOST: tcp://socket-proxy:${SOCKET_PROXY_PORT}
+            # NOTIFICATION_URLS: ${BACKUP_BACKUP_NOTIFICATION_URLS}
         networks:
             - docker_socket_proxy
         volumes:

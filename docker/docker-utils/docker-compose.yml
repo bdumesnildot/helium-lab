@@ -20,19 +20,19 @@ services:
             - VERSION=1
 
             - INFO=1 # Authentik, Portainer
-            - IMAGES=0 # Portainer, backup
+            - IMAGES=1 # Portainer, backup
             - NETWORKS=0 # Portainer
-            - VOLUMES=0 # Portainer, backup
+            - VOLUMES=1 # Portainer, backup
             - CONTAINERS=1 # Traefik, Authentik, portainer, backup, etc.
 
             - ALLOW_START=1 # Authentik, Portainer, backup
             - ALLOW_STOP=1 # Authentik, Portainer, backup
             - ALLOW_RESTARTS=0 # Portainer
             - SERVICES=0 # Portainer
-            - TASKS=0 # Portainer, backup
-            - EXEC=0 # backup
+            - TASKS=1 # Portainer, backup
+            - EXEC=1 # backup
             - POST=1 # Authentik, backup, Watchtower
-            - NODES=0 # backup
+            - NODES=1 # backup
 
             - AUTH=0
             - SECRETS=0

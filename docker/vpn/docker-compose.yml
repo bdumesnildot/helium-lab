@@ -56,10 +56,10 @@ services:
             traefik.http.services.qbittorrent.loadbalancer.server.port: 8888
             traefik.http.routers.qbittorrent.middlewares: authentik-auth
             # -- nzbget
-            traefik.http.routers.nzbget.service: nzbget
-            traefik.http.routers.nzbget.rule: Host(`nzbget.${DOMAIN}`)
-            traefik.http.routers.nzbget.entrypoints: websecure
-            traefik.http.routers.nzbget.tls.certresolver: myresolver
-            traefik.http.services.nzbget.loadbalancer.server.port: 6789
-            traefik.http.routers.nzbget.middlewares: authentik-auth
+            # traefik.http.routers.nzbget.service: nzbget
+            # traefik.http.routers.nzbget.rule: Host(`nzbget.${DOMAIN}`)
+            # traefik.http.routers.nzbget.entrypoints: websecure
+            # traefik.http.routers.nzbget.tls.certresolver: myresolver
+            # traefik.http.services.nzbget.loadbalancer.server.port: 6789
+            # traefik.http.routers.nzbget.middlewares: authentik-auth
         restart: unless-stopped

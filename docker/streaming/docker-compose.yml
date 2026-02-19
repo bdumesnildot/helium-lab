@@ -143,19 +143,25 @@ services:
     # Torrent streaming through Debrid
     # ----------------------------------------
     riven-frontend:
-        image: spoked/riven-frontend:latest
+        image: spoked/riven-frontend:main
         container_name: riven-frontend
         user: ${PUID}:${PGID}
         tty: true
         environment:
+            RIVEN_LOG_LEVEL: INFO
             TZ: ${TZ}
+            DATABASE_URL: /riven/data/riven.db
+            BACKEND_URL: http://riven:8080
+            BACKEND_API_KEY: ${RIVEN_BACKEND_API_KEY}
+            AUTH_SECRET: ${RIVEN_AUTH_SECRET}
+            ORIGIN: https://riven.${DOMAIN}
         networks:
             - traefik_proxy
             - riven
         ports:
             - ${RIVEN_FRONTEND_PORT}:3000
         volumes:
-            - /srv/docker/riven/frontend/config:/riven/config
+            - /srv/docker/riven/frontend/data:/riven/data
         labels:
             # -- traefik
             traefik.enable: true
@@ -172,22 +178,44 @@ services:
                 condition: service_started
 
     riven:
-        image: spoked/riven:latest
+        image: spoked/riven:main
         container_name: riven
         tty: true
+        privileged: true
         cap_add:
             - SYS_ADMIN
+        devices:
+            - /dev/fuse
         security_opt:
             - apparmor:unconfined
         shm_size: 1024m
-        devices:
-            - /dev/fuse
         environment:
+            RIVEN_LOG_LEVEL: INFO
             PUID: ${PUID}
             PGID: ${PGID}
             TZ: ${TZ}
+            # database
             RIVEN_FORCE_ENV: true
-            RIVEN_DATABASE_HOST: postgresql+psycopg2://${RIVEN_POSTGRES_USER}:${RIVEN_POSTGRES_PASSWORD}@riven-db/${RIVEN_POSTGRES_DB}
+            RIVEN_DATABASE_HOST: postgresql+psycopg2://${RIVEN_POSTGRES_USER}:${RIVEN_POSTGRES_PASSWORD}@riven-postgresql/${RIVEN_POSTGRES_DB}
+            # VFS Configuration
+            RIVEN_UPDATERS_LIBRARY_PATH: /mount
+            RIVEN_FILESYSTEM_MOUNT_PATH: /mount
+            RIVEN_FILESYSTEM_CACHE_DIR: /dev/shm/riven-cache
+            RIVEN_FILESYSTEM_CACHE_MAX_SIZE_MB: 10240
+            RIVEN_FILESYSTEM_CACHE_EVICTION: TTL
+            RIVEN_FILESYSTEM_CACHE_TTL_SECONDS: 3600
+            RIVEN_FILESYSTEM_CHUNK_SIZE_MB: 16
+            RIVEN_FILESYSTEM_FETCH_AHEAD_CHUNKS: 4
+            # Downloaders
+            RIVEN_DOWNLOADERS_ALL_DEBRID_ENABLED: true
+            RIVEN_DOWNLOADERS_ALL_DEBRID_API_KEY: ${RIVEN_ALL_DEBRID_API_KEY}
+            # Scrapers
+            RIVEN_SCRAPERS_PROWLARR_ENABLED: true
+            RIVEN_SCRAPERS_PROWLARR_URL: http://prowlarr:9696
+            RIVEN_SCRAPERS_PROWLARR_API_KEY: ${RIVEN_PROWLARR_API_KEY}
+            RIVEN_SCRAPERS_PROWLARR_TIMEOUT: 30
+            # Content Services
+            RIVEN_CONTENT_OVERSEERR_ENABLED: false
         networks:
             - traefik_proxy
             - riven

@@ -43,7 +43,7 @@ services:
             - /srv/docker/radarr/config:/backup/radarr-config:ro
             - /srv/docker/jellyfin/config:/backup/jellyfin-config:ro
             - riven_postgresql_dumps:/backup/riven-postgresql-dump:ro
-            - /srv/docker/riven/frontend/config:/backup/riven-frontend-config:ro
+            - /srv/docker/riven/frontend/data:/backup/riven-frontend-data:ro
             - /srv/docker/riven/backend/data:/backup/riven-backend-data:ro
             # downloads
             - /srv/docker/qbittorrent/config/:/backup/qbittorrent-config:ro

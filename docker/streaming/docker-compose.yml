@@ -49,6 +49,9 @@ services:
             # traefik.http.routers.jellyfin.middlewares: authentik-auth // forward auth is disabled for now to prefer a LDAP settings in jellyfin and allow mobile app access
             # -- backup
             docker-volume-backup.stop-during-backup: jellyfin-service
+            # -- version monitoring
+            com.centurylinklabs.watchtower.enable: "true"
+            com.centurylinklabs.watchtower.monitor-only: "true"
         restart: unless-stopped
 
     # ----------------------------------------
@@ -83,6 +86,9 @@ services:
             traefik.http.routers.prowlarr.middlewares: authentik-auth
             # -- backup
             docker-volume-backup.stop-during-backup: prowlarr-service
+            # -- version monitoring
+            com.centurylinklabs.watchtower.enable: "true"
+            com.centurylinklabs.watchtower.monitor-only: "true"
         restart: unless-stopped
 
     flaresolverr:
@@ -110,6 +116,9 @@ services:
             - prowlarr
         ports:
             - ${PROWLARR_BYPARR_PORT}:8191
+        labels:
+            com.centurylinklabs.watchtower.enable: "true"
+            com.centurylinklabs.watchtower.monitor-only: "true"
         shm_size: 2gb
         restart: unless-stopped
 
@@ -143,6 +152,9 @@ services:
             traefik.http.routers.sonarr.middlewares: authentik-auth
             # -- backup
             docker-volume-backup.stop-during-backup: sonarr-service
+            # -- version monitoring
+            com.centurylinklabs.watchtower.enable: "true"
+            com.centurylinklabs.watchtower.monitor-only: "true"
         restart: unless-stopped
 
     # ----------------------------------------
@@ -175,6 +187,9 @@ services:
             traefik.http.routers.radarr.middlewares: authentik-auth
             # -- backup
             docker-volume-backup.stop-during-backup: radarr-service
+            # -- version monitoring
+            com.centurylinklabs.watchtower.enable: "true"
+            com.centurylinklabs.watchtower.monitor-only: "true"
         restart: unless-stopped
 
     # ----------------------------------------

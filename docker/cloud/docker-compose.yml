@@ -41,4 +41,7 @@ services:
             traefik.http.routers.filebrowser.tls.certresolver: myresolver
             # -- backup
             docker-volume-backup.stop-during-backup: filebrowser-quantum-service
+            # -- version monitoring
+            com.centurylinklabs.watchtower.enable: "true"
+            com.centurylinklabs.watchtower.monitor-only: "true"
         restart: unless-stopped

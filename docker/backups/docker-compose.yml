@@ -47,4 +47,7 @@ services:
 
             # -- path to local backup (destination)
             - ${LOCAL_BACKUPS_PATH}/docker-volume-backup:/archive
+        labels:
+            com.centurylinklabs.watchtower.enable: "true"
+            com.centurylinklabs.watchtower.monitor-only: "true"
         restart: unless-stopped

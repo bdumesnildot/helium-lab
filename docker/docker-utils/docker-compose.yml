@@ -15,46 +15,80 @@ services:
         user: root
         init: true
         environment:
-            - LOG_LEVEL=info
-            - EVENTS=1
-            - PING=1
-            - VERSION=1
+            LOG_LEVEL: info
+            EVENTS: 1
+            PING: 1
 
-            - INFO=1 # Authentik, Portainer
-            - IMAGES=1 # Portainer, backup
-            - NETWORKS=0 # Portainer
-            - VOLUMES=1 # Portainer, backup
-            - CONTAINERS=1 # Traefik, Authentik, portainer, backup, etc.
+            INFO: 1 # Authentik, Portainer
+            IMAGES: 1 # Portainer, backup
+            NETWORKS: 1 # Portainer
+            VOLUMES: 1 # Portainer, backup
+            CONTAINERS: 1 # Traefik, Authentik, portainer, backup, etc.
 
-            - ALLOW_START=1 # Authentik, Portainer, backup
-            - ALLOW_STOP=1 # Authentik, Portainer, backup
-            - ALLOW_RESTARTS=0 # Portainer
-            - SERVICES=0 # Portainer
-            - TASKS=1 # Portainer, backup
-            - EXEC=1 # backup
-            - POST=1 # Authentik, backup, Watchtower
-            - NODES=1 # backup
+            ALLOW_START: 1 # Authentik, Portainer, backup
+            ALLOW_STOP: 1 # Authentik, Portainer, backup
+            ALLOW_RESTARTS: 1 # Portainer
+            SERVICES: 0 # Portainer
+            TASKS: 1 # Portainer, backup
+            EXEC: 1 # backup
+            POST: 1 # Authentik, backup, Watchtower
+            PULL: 1 # Watchtower
+            NODES: 1 # backup
 
-            - AUTH=0
-            - SECRETS=0
-            - BUILD=0
-            - COMMIT=0
-            - CONFIGS=0
-            - DISTRIBUTION=0
-            - PLUGINS=0
-            - SESSION=0
-            - SWARM=0
-            - SYSTEM=0
-            - DISABLE_IPV6=0
+            AUTH: 0
+            SECRETS: 0
+            BUILD: 0
+            COMMIT: 0
+            CONFIGS: 0
+            DISTRIBUTION: 0
+            PLUGINS: 0
+            SESSION: 0
+            SWARM: 0
+            SYSTEM: 0
+            DISABLE_IPV6: 0
         networks:
             - docker_socket_proxy
         ports:
             - ${SOCKET_PROXY_PORT:-2375}:2375
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
+        labels:
+            com.centurylinklabs.watchtower.enable: "true"
+            com.centurylinklabs.watchtower.monitor-only: "true"
         tmpfs:
             - /run
         read_only: true
         security_opt:
             - no-new-privileges:true
+        restart: unless-stopped
+
+    # ----------------------------------------
+    # WATCHTOWER
+    # monitor containers updates with email notifications
+    # ----------------------------------------
+    watchtower:
+        image: containrrr/watchtower:latest
+        container_name: watchtower
+        environment:
+            DOCKER_HOST: tcp://socket-proxy:2375
+            DOCKER_API_VERSION: 1.53
+            # core
+            WATCHTOWER_LABEL_ENABLE: true
+            WATCHTOWER_LABEL_TAKE_PRECEDENCE: true
+            WATCHTOWER_SCHEDULE: ${WATCHTOWER_SCHEDULE:-0 0 4 * * *}
+            # notifications
+            WATCHTOWER_NOTIFICATIONS_LEVEL: info
+            WATCHTOWER_NOTIFICATIONS: email
+            WATCHTOWER_NOTIFICATION_EMAIL_FROM: ${WATCHTOWER_EMAIL_FROM}
+            WATCHTOWER_NOTIFICATION_EMAIL_TO: ${WATCHTOWER_EMAIL_TO}
+            WATCHTOWER_NOTIFICATION_EMAIL_SERVER: ${WATCHTOWER_SMTP_SERVER}
+            WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT: ${WATCHTOWER_SMTP_PORT:-587}
+            WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER: ${WATCHTOWER_SMTP_USER}
+            WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD: ${WATCHTOWER_SMTP_PASSWORD}
+
+            WATCHTOWER_NOTIFICATION_EMAIL_DELAY: 60 # delay in seconds, useful to group notifications
+        networks:
+            - docker_socket_proxy
+        depends_on:
+            - socket-proxy
         restart: unless-stopped

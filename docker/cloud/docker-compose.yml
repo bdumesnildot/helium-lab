@@ -16,6 +16,8 @@ services:
         environment:
             FILEBROWSER_CONFIG: config.yml
             DOMAIN: ${DOMAIN}
+            FILEBROWSER_OIDC_CLIENT_ID: ${FILEBROWSER_OICD_CLIENT_ID}
+            FILEBROWSER_OIDC_CLIENT_SECRET: ${FILEBROWSER_OICD_CLIENT_SECRET}
         networks:
             - traefik_proxy
         ports:
@@ -34,7 +36,6 @@ services:
             traefik.http.routers.filebrowser.rule: Host(`files.${DOMAIN}`)
             traefik.http.routers.filebrowser.entrypoints: websecure
             traefik.http.routers.filebrowser.tls.certresolver: myresolver
-            traefik.http.routers.filebrowser.middlewares: authentik-auth
             # -- backup
             docker-volume-backup.stop-during-backup: filebrowser-service
         restart: unless-stopped

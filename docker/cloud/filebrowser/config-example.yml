@@ -1,0 +1,36 @@
+# Filebrowser configuration file template
+#
+# Rename as config.yml and replace <placeholder> with your actual domain name in the externalUrl and issuerUrl fields.
+
+server:
+    database: "data/database.db"
+    cacheDir: "data/tmp"
+    sources:
+        - path: "/storage"
+          name: Home
+        - path: "/server"
+          name: Server
+    externalUrl: "https://files.[ DOMAIN ]"
+    maxArchiveSize: 50
+auth:
+    methods:
+        password:
+            enabled: false
+        oidc:
+            enabled: true
+            issuerUrl: "https://auth.[ DOMAIN ]/application/o/filebrowser/"
+            scopes: "email openid profile"
+            userIdentifier: "preferred_username"
+            createUser: false
+            logoutRedirectUrl: "https://auth.[ DOMAIN ]/application/o/filebrowser/end-session/?redirect_uri=https://files.[ DOMAIN ]/"
+        proxy:
+            enabled: false
+            header: "X-authentik-username"
+            createUser: false
+
+frontend:
+    name: "Files - Helium Lab"
+    description: "Secure file storage"
+    disableDefaultLinks: true
+    disableUsedPercentage: false
+    disableNavButtons: false

@@ -26,7 +26,7 @@ services:
             - ./filebrowser/config.yml:/home/filebrowser/config.yml:ro
             # -- data & cache
             - /srv/docker/filebrowser-quantum/data:/home/filebrowser/data
-            - /srv/docker/filebrowser/tmp:/home/filebrowser/tmp # Required if uid other than 1000
+            - /srv/docker/filebrowser-quantum/tmp:/home/filebrowser/tmp # Required if uid other than 1000
             # -- path
             - ${STORAGE_PATH}:/storage
             - ~/:/server:ro

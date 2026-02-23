@@ -14,7 +14,7 @@ services:
         container_name: filebrowser-quantum
         user: ${PUID}:${PGID}
         environment:
-            FILEBROWSER_CONFIG: config.yml
+            FILEBROWSER_CONFIG: config.yaml
             DOMAIN: ${DOMAIN}
             FILEBROWSER_OIDC_CLIENT_ID: ${FILEBROWSER_OICD_CLIENT_ID}
             FILEBROWSER_OIDC_CLIENT_SECRET: ${FILEBROWSER_OICD_CLIENT_SECRET}
@@ -23,13 +23,16 @@ services:
         ports:
             - ${FILEBROWSER_PORT}:80
         volumes:
-            - ./filebrowser/config.yml:/home/filebrowser/config.yml:ro
+            - ./filebrowser/config.yml:/home/filebrowser/config.yaml:ro
             # -- data & cache
             - /srv/docker/filebrowser-quantum/data:/home/filebrowser/data
             - /srv/docker/filebrowser-quantum/tmp:/home/filebrowser/tmp # Required if uid other than 1000
             # -- path
             - ${STORAGE_PATH}:/storage
             - ~/:/server:ro
+        entrypoint: ["sh", "-c"] # Optional, copy the config file to the data directory for backup purposes
+        command: >
+            "cp /home/filebrowser/config.yaml /home/filebrowser/data/config.yml && exec /home/filebrowser/filebrowser"
         labels:
             # -- traefik
             traefik.enable: true
@@ -37,5 +40,5 @@ services:
             traefik.http.routers.filebrowser.entrypoints: websecure
             traefik.http.routers.filebrowser.tls.certresolver: myresolver
             # -- backup
-            docker-volume-backup.stop-during-backup: filebrowser-service
+            docker-volume-backup.stop-during-backup: filebrowser-quantum-service
         restart: unless-stopped

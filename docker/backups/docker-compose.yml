@@ -3,8 +3,6 @@
 volumes:
     authentik_postgresql_dumps:
         external: true
-    riven_postgresql_dumps:
-        external: true
 
 networks:
     docker_socket_proxy:
@@ -37,14 +35,13 @@ services:
             - /srv/docker/authentik/media:/backup/authentik-server-media:ro
             - /srv/docker/authentik/templates:/backup/authentik-server-templates:ro
             - /srv/docker/authentik/certs:/backup/authentik-server-certs:ro
+            # cloud
+            - /srv/docker/filebrowser-quantum/data:/backup/filebrowser-quantum-data:ro
             # streaming
+            - /srv/docker/jellyfin/config:/backup/jellyfin-config:ro
             - /srv/docker/prowlarr/config:/backup/prowlarr-config:ro
             - /srv/docker/sonarr/config:/backup/sonarr-config:ro
             - /srv/docker/radarr/config:/backup/radarr-config:ro
-            - /srv/docker/jellyfin/config:/backup/jellyfin-config:ro
-            - riven_postgresql_dumps:/backup/riven-postgresql-dump:ro
-            - /srv/docker/riven/frontend/data:/backup/riven-frontend-data:ro
-            - /srv/docker/riven/backend/data:/backup/riven-backend-data:ro
             # downloads
             - /srv/docker/qbittorrent/config/:/backup/qbittorrent-config:ro
 

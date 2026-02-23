@@ -18,10 +18,10 @@ COMPOSE_FILE   := docker-compose.yml
 # Stacks in boot order (left → right). Shutdown is reversed automatically.
 # To add a new stack, just append its name here — per-stack targets are
 # generated automatically (up-<stack>, down-<stack>, restart-<stack>, …).
-STACKS := docker-utils reverse-proxy vpn auth streaming downloads backups
+STACKS := docker-utils reverse-proxy vpn auth cloud streaming downloads backups
 
 # External volumes required by the stacks
-VOLUMES := authentik_postgresql_dumps riven_postgresql_dumps
+VOLUMES := authentik_postgresql_dumps riven_postgresql_dumps riven_legacy_postgresql_dumps
 
 # External networks required by the stacks
 NETWORKS := docker_socket_proxy traefik_proxy

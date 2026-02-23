@@ -4,6 +4,9 @@ volumes:
     riven_postgresql_data:
     riven_postgresql_dumps:
         external: true
+    riven_legacy_postgresql_data:
+    riven_legacy_postgresql_dumps:
+        external: true
 
 networks:
     traefik_proxy:
@@ -12,6 +15,42 @@ networks:
     riven:
 
 services:
+    # ----------------------------------------
+    # JELLYFIN
+    # An alternative to Plex
+    # ----------------------------------------
+    jellyfin:
+        image: lscr.io/linuxserver/jellyfin:latest
+        container_name: jellyfin
+        tty: true
+        environment:
+            TZ: ${TZ}
+            PUID: ${PUID}
+            PGID: ${PGID}
+            JELLYFIN_PublishedServerUrl: https://jellyfin.${DOMAIN}
+        networks:
+            - traefik_proxy
+        ports:
+            - ${JELLYFIN_PORT}:8096
+            - 7359:7359/udp
+            - 1900:1900/udp
+        volumes:
+            - /srv/docker/jellyfin/config:/config
+            - ${MEDIA_UNIFIED_PATH}/tvshows:/data/tvshows
+            - ${MEDIA_UNIFIED_PATH}/movies:/data/movies
+            # - ${MEDIA_UNIFIED_PATH}/riven:/mount:rslave,z
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.http.routers.jellyfin.rule: Host(`jellyfin.${DOMAIN}`)
+            traefik.http.routers.jellyfin.entrypoints: websecure
+            traefik.http.routers.jellyfin.tls.certresolver: myresolver
+            traefik.http.services.jellyfin.loadbalancer.server.port: 8096
+            # traefik.http.routers.jellyfin.middlewares: authentik-auth // forward auth is disabled for now to prefer a LDAP settings in jellyfin and allow mobile app access
+            # -- backup
+            docker-volume-backup.stop-during-backup: jellyfin-service
+        restart: unless-stopped
+
     # ----------------------------------------
     # PROWLARR
     # Index management
@@ -93,7 +132,7 @@ services:
         volumes:
             - /srv/docker/sonarr/config:/config
             - ${MEDIA_PATH}:/downloads
-            - ${MEDIA_UNIFIED_PATH}/series:/tv
+            - ${MEDIA_UNIFIED_PATH}/tvshows:/tv
         labels:
             # -- traefik
             traefik.enable: true
@@ -142,166 +181,222 @@ services:
     # RIVEN
     # Torrent streaming through Debrid
     # ----------------------------------------
-    riven-frontend:
-        image: spoked/riven-frontend:main
-        container_name: riven-frontend
-        user: ${PUID}:${PGID}
-        tty: true
-        environment:
-            RIVEN_LOG_LEVEL: INFO
-            TZ: ${TZ}
-            DATABASE_URL: /riven/data/riven.db
-            BACKEND_URL: http://riven:8080
-            BACKEND_API_KEY: ${RIVEN_BACKEND_API_KEY}
-            AUTH_SECRET: ${RIVEN_AUTH_SECRET}
-            ORIGIN: https://riven.${DOMAIN}
-        networks:
-            - traefik_proxy
-            - riven
-        ports:
-            - ${RIVEN_FRONTEND_PORT}:3000
-        volumes:
-            - /srv/docker/riven/frontend/data:/riven/data
-        labels:
-            # -- traefik
-            traefik.enable: true
-            traefik.docker.network: traefik_proxy
-            traefik.http.routers.riven.rule: Host(`riven.${DOMAIN}`)
-            traefik.http.routers.riven.entrypoints: websecure
-            traefik.http.routers.riven.tls.certresolver: myresolver
-            traefik.http.routers.riven.middlewares: authentik-auth
-            # -- backup
-            docker-volume-backup.stop-during-backup: riven-frontend-service
-        restart: unless-stopped
-        depends_on:
-            riven:
-                condition: service_started
+    # riven-frontend:
+    #     image: riven-frontend-local:latest # local build for testing and development
+    #     # image: spoked/riven-frontend:dev
+    #     container_name: riven-frontend
+    #     user: ${PUID}:${PGID}
+    #     tty: true
+    #     environment:
+    #         RIVEN_LOG_LEVEL: DEBUG
+    #         TZ: ${TZ}
+    #         DATABASE_URL: /riven/data/riven.db
+    #         BACKEND_URL: http://riven:8080
+    #         BACKEND_API_KEY: ${RIVEN_BACKEND_API_KEY}
+    #         AUTH_SECRET: ${RIVEN_AUTH_SECRET}
+    #         ORIGIN: https://riven.${DOMAIN}
+    #     networks:
+    #         - traefik_proxy
+    #         - riven
+    #     ports:
+    #         - ${RIVEN_FRONTEND_PORT}:3000
+    #     volumes:
+    #         - /srv/docker/riven/frontend/data:/riven/data
+    #     labels:
+    #         # -- traefik
+    #         traefik.enable: true
+    #         traefik.docker.network: traefik_proxy
+    #         traefik.http.routers.riven-frontend.rule: Host(`riven.${DOMAIN}`)
+    #         traefik.http.routers.riven-frontend.entrypoints: websecure
+    #         traefik.http.routers.riven-frontend.tls.certresolver: myresolver
+    #         traefik.http.routers.riven-frontend.middlewares: authentik-auth
+    #         # -- backup
+    #         docker-volume-backup.stop-during-backup: riven-frontend-service
+    #     restart: unless-stopped
+    #     depends_on:
+    #         riven:
+    #             condition: service_started
 
-    riven:
-        image: spoked/riven:main
-        container_name: riven
-        tty: true
-        privileged: true
-        cap_add:
-            - SYS_ADMIN
-        devices:
-            - /dev/fuse
-        security_opt:
-            - apparmor:unconfined
-        shm_size: 1024m
-        environment:
-            RIVEN_LOG_LEVEL: INFO
-            PUID: ${PUID}
-            PGID: ${PGID}
-            TZ: ${TZ}
-            # database
-            RIVEN_FORCE_ENV: true
-            RIVEN_DATABASE_HOST: postgresql+psycopg2://${RIVEN_POSTGRES_USER}:${RIVEN_POSTGRES_PASSWORD}@riven-postgresql/${RIVEN_POSTGRES_DB}
-            # VFS Configuration
-            RIVEN_UPDATERS_LIBRARY_PATH: /mount
-            RIVEN_FILESYSTEM_MOUNT_PATH: /mount
-            RIVEN_FILESYSTEM_CACHE_DIR: /dev/shm/riven-cache
-            RIVEN_FILESYSTEM_CACHE_MAX_SIZE_MB: 10240
-            RIVEN_FILESYSTEM_CACHE_EVICTION: TTL
-            RIVEN_FILESYSTEM_CACHE_TTL_SECONDS: 3600
-            RIVEN_FILESYSTEM_CHUNK_SIZE_MB: 16
-            RIVEN_FILESYSTEM_FETCH_AHEAD_CHUNKS: 4
-            # Downloaders
-            RIVEN_DOWNLOADERS_ALL_DEBRID_ENABLED: true
-            RIVEN_DOWNLOADERS_ALL_DEBRID_API_KEY: ${RIVEN_ALL_DEBRID_API_KEY}
-            # Scrapers
-            RIVEN_SCRAPERS_PROWLARR_ENABLED: true
-            RIVEN_SCRAPERS_PROWLARR_URL: http://prowlarr:9696
-            RIVEN_SCRAPERS_PROWLARR_API_KEY: ${RIVEN_PROWLARR_API_KEY}
-            RIVEN_SCRAPERS_PROWLARR_TIMEOUT: 30
-            # Content Services
-            RIVEN_CONTENT_OVERSEERR_ENABLED: false
-        networks:
-            - traefik_proxy
-            - riven
-            - prowlarr
-        ports:
-            - ${RIVEN_BACKEND_PORT}:8080
-        volumes:
-            - /srv/docker/riven/backend/data:/riven/data
-            - ${MEDIA_UNIFIED_PATH}/riven:/mount:rshared,z
-        labels:
-            traefik.enable: true
-            traefik.docker.network: traefik_proxy
-            traefik.http.routers.riven-backend.rule: Host(`riven-api.${DOMAIN}`)
-            traefik.http.routers.riven-backend.entrypoints: websecure
-            traefik.http.routers.riven-backend.tls.certresolver: myresolver
-            traefik.http.services.riven-backend.loadbalancer.server.port: 8080
-            # -- backup
-            docker-volume-backup.stop-during-backup: riven-service
-        healthcheck:
-            test: curl -s http://localhost:8080 >/dev/null || exit 1
-            interval: 30s
-            timeout: 10s
-            retries: 10
-        restart: unless-stopped
-        depends_on:
-            riven-postgresql:
-                condition: service_healthy
+    # riven:
+    #     image: riven-local:test # local build for testing and development
+    #     # image: spoked/riven:dev
+    #     container_name: riven
+    #     tty: true
+    #     privileged: true
+    #     cap_add:
+    #         - SYS_ADMIN
+    #     devices:
+    #         - /dev/fuse
+    #     security_opt:
+    #         - apparmor:unconfined
+    #     shm_size: 1024m
+    #     environment:
+    #         RIVEN_LOG_LEVEL: DEBUG
+    #         PUID: ${PUID}
+    #         PGID: ${PGID}
+    #         TZ: ${TZ}
+    #         # database
+    #         # RIVEN_FORCE_ENV: true
+    #         RIVEN_DATABASE_HOST: postgresql+psycopg2://${RIVEN_POSTGRES_USER}:${RIVEN_POSTGRES_PASSWORD}@riven-postgresql/${RIVEN_POSTGRES_DB}
+    #         # VFS Configuration
+    #         RIVEN_UPDATERS_LIBRARY_PATH: /mount
+    #         RIVEN_FILESYSTEM_MOUNT_PATH: /mount
+    #         RIVEN_FILESYSTEM_CACHE_DIR: /dev/shm/riven-cache
+    #         RIVEN_FILESYSTEM_CACHE_MAX_SIZE_MB: 10240
+    #         RIVEN_FILESYSTEM_CACHE_EVICTION: TTL
+    #         RIVEN_FILESYSTEM_CACHE_TTL_SECONDS: 3600
+    #         RIVEN_FILESYSTEM_CHUNK_SIZE_MB: 16
+    #         RIVEN_FILESYSTEM_FETCH_AHEAD_CHUNKS: 4
+    #     networks:
+    #         - traefik_proxy
+    #         - riven
+    #         - prowlarr
+    #     ports:
+    #         - ${RIVEN_BACKEND_PORT}:8080
+    #     volumes:
+    #         - /srv/docker/riven/backend/data:/riven/data
+    #         - ${MEDIA_UNIFIED_PATH}/riven:/mount:rshared,z
+    #     labels:
+    #         traefik.enable: true
+    #         traefik.docker.network: traefik_proxy
+    #         traefik.http.routers.riven-backend.rule: Host(`riven-api.${DOMAIN}`)
+    #         traefik.http.routers.riven-backend.entrypoints: websecure
+    #         traefik.http.routers.riven-backend.tls.certresolver: myresolver
+    #         traefik.http.services.riven-backend.loadbalancer.server.port: 8080
+    #         # -- backup
+    #         docker-volume-backup.stop-during-backup: riven-service
+    #     healthcheck:
+    #         test: curl -s http://localhost:8080 >/dev/null || exit 1
+    #         interval: 30s
+    #         timeout: 10s
+    #         retries: 10
+    #     restart: unless-stopped
+    #     depends_on:
+    #         riven-postgresql:
+    #             condition: service_healthy
 
-    riven-postgresql:
-        image: postgres:17-alpine
-        container_name: riven-postgresql
-        user: root
-        environment:
-            POSTGRES_USER: ${RIVEN_POSTGRES_USER}
-            POSTGRES_PASSWORD: ${RIVEN_POSTGRES_PASSWORD}
-            POSTGRES_DB: ${RIVEN_POSTGRES_DB}
-            # path config
-            PGDATA: /var/lib/postgresql/data/pgdata
-        networks:
-            - riven
-        volumes:
-            - riven_postgresql_data:/var/lib/postgresql/data/pgdata
-            - riven_postgresql_dumps:/tmp/dumps
-            - ../backups/scripts/postgres-backup.sh:/postgres-backup.sh:ro
-        labels:
-            docker-volume-backup.exec-label: riven-postgresql
-            docker-volume-backup.archive-pre: sh -c '/postgres-backup.sh'
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-        restart: unless-stopped
+    # riven-postgresql:
+    #     image: postgres:17-alpine
+    #     container_name: riven-postgresql
+    #     user: root
+    #     environment:
+    #         POSTGRES_USER: ${RIVEN_POSTGRES_USER}
+    #         POSTGRES_PASSWORD: ${RIVEN_POSTGRES_PASSWORD}
+    #         POSTGRES_DB: ${RIVEN_POSTGRES_DB}
+    #         # path config
+    #         PGDATA: /var/lib/postgresql/data/pgdata
+    #     networks:
+    #         - riven
+    #     volumes:
+    #         - riven_postgresql_data:/var/lib/postgresql/data/pgdata
+    #         - riven_postgresql_dumps:/tmp/dumps
+    #         - ../backups/scripts/postgres-backup.sh:/postgres-backup.sh:ro
+    #     labels:
+    #         docker-volume-backup.exec-label: riven-postgresql
+    #         docker-volume-backup.archive-pre: sh -c '/postgres-backup.sh'
+    #     healthcheck:
+    #         test: ["CMD-SHELL", "pg_isready -U postgres"]
+    #         interval: 10s
+    #         timeout: 5s
+    #         retries: 5
+    #     restart: unless-stopped
 
-    # ----------------------------------------
-    # JELLYFIN
-    # An alternative to Plex
-    # ----------------------------------------
-    jellyfin:
-        image: lscr.io/linuxserver/jellyfin:latest
-        container_name: jellyfin
-        tty: true
-        environment:
-            TZ: ${TZ}
-            PUID: ${PUID}
-            PGID: ${PGID}
-            JELLYFIN_PublishedServerUrl: https://jellyfin.${DOMAIN}
-        networks:
-            - traefik_proxy
-        ports:
-            - ${JELLYFIN_PORT}:8096
-            - 7359:7359/udp
-            - 1900:1900/udp
-        volumes:
-            - /srv/docker/jellyfin/config:/config
-            - ${MEDIA_UNIFIED_PATH}/series:/data/tvshows
-            - ${MEDIA_UNIFIED_PATH}/movies:/data/movies
-            - ${MEDIA_UNIFIED_PATH}/riven:/mount:rslave,z
-        labels:
-            # -- traefik
-            traefik.enable: true
-            traefik.http.routers.jellyfin.rule: Host(`jellyfin.${DOMAIN}`)
-            traefik.http.routers.jellyfin.entrypoints: websecure
-            traefik.http.routers.jellyfin.tls.certresolver: myresolver
-            traefik.http.services.jellyfin.loadbalancer.server.port: 8096
-            # traefik.http.routers.jellyfin.middlewares: authentik-auth // forward auth is disabled for now to prefer a LDAP settings in jellyfin and allow mobile app access
-            # -- backup
-            docker-volume-backup.stop-during-backup: jellyfin-service
-        restart: unless-stopped
+    # riven-frontend-legacy:
+    #     image: spoked/riven-frontend:latest
+    #     container_name: riven-frontend-legacy
+    #     user: ${PUID}:${PGID}
+    #     tty: true
+    #     environment:
+    #         TZ: ${TZ}
+    #     networks:
+    #         - traefik_proxy
+    #         - riven
+    #     ports:
+    #         - ${RIVEN_FRONTEND_PORT}:3000
+    #     volumes:
+    #         - /srv/docker/riven-legacy/frontend/config:/riven/config
+    #     labels:
+    #         # -- traefik
+    #         traefik.enable: true
+    #         traefik.docker.network: traefik_proxy
+    #         traefik.http.routers.riven-frontend-legacy.rule: Host(`riven.${DOMAIN}`)
+    #         traefik.http.routers.riven-frontend-legacy.entrypoints: websecure
+    #         traefik.http.routers.riven-frontend-legacy.tls.certresolver: myresolver
+    #         traefik.http.routers.riven-frontend-legacy.middlewares: authentik-auth
+    #         # -- backup
+    #         docker-volume-backup.stop-during-backup: riven-legacy-frontend-service
+    #     restart: unless-stopped
+    #     depends_on:
+    #         riven-legacy:
+    #             condition: service_started
+
+    # riven-legacy:
+    #     image: spoked/riven:main
+    #     container_name: riven-legacy
+    #     tty: true
+    #     cap_add:
+    #         - SYS_ADMIN
+    #     devices:
+    #         - /dev/fuse
+    #     security_opt:
+    #         - apparmor:unconfined
+    #     shm_size: 1024m
+    #     environment:
+    #         PUID: ${PUID}
+    #         PGID: ${PGID}
+    #         TZ: ${TZ}
+    #         RIVEN_FORCE_ENV: true
+    #         RIVEN_DATABASE_HOST: postgresql+psycopg2://${RIVEN_POSTGRES_USER}:${RIVEN_POSTGRES_PASSWORD}@riven-legacy-postgresql/${RIVEN_POSTGRES_DB}
+    #     networks:
+    #         - traefik_proxy
+    #         - riven
+    #         - prowlarr
+    #     ports:
+    #         - ${RIVEN_BACKEND_PORT}:8080
+    #     volumes:
+    #         - /srv/docker/riven-legacy/backend/data:/riven/data
+    #         - ${MEDIA_UNIFIED_PATH}/riven:/mnt:rshared,z
+    #     labels:
+    #         traefik.enable: true
+    #         traefik.docker.network: traefik_proxy
+    #         traefik.http.routers.riven-backend-legacy.rule: Host(`riven-api.${DOMAIN}`)
+    #         traefik.http.routers.riven-backend-legacy.entrypoints: websecure
+    #         traefik.http.routers.riven-backend-legacy.tls.certresolver: myresolver
+    #         traefik.http.services.riven-backend-legacy.loadbalancer.server.port: 8080
+    #         # -- backup
+    #         docker-volume-backup.stop-during-backup: riven-legacy-service
+    #     healthcheck:
+    #         test: curl -s http://localhost:8080 >/dev/null || exit 1
+    #         interval: 30s
+    #         timeout: 10s
+    #         retries: 10
+    #     restart: unless-stopped
+    #     depends_on:
+    #         riven-legacy-postgresql:
+    #             condition: service_healthy
+
+    # riven-legacy-postgresql:
+    #     image: postgres:17-alpine
+    #     container_name: riven-legacy-postgresql
+    #     user: root
+    #     environment:
+    #         POSTGRES_USER: ${RIVEN_POSTGRES_USER}
+    #         POSTGRES_PASSWORD: ${RIVEN_POSTGRES_PASSWORD}
+    #         POSTGRES_DB: ${RIVEN_POSTGRES_DB}
+    #         # path config
+    #         PGDATA: /var/lib/postgresql/data/pgdata
+    #     networks:
+    #         - riven
+    #     volumes:
+    #         - riven_legacy_postgresql_data:/var/lib/postgresql/data/pgdata
+    #         - riven_legacy_postgresql_dumps:/tmp/dumps
+    #         - ../backups/scripts/postgres-backup.sh:/postgres-backup.sh:ro
+    #     labels:
+    #         docker-volume-backup.exec-label: riven-legacy-postgresql
+    #         docker-volume-backup.archive-pre: sh -c '/postgres-backup.sh'
+    #     healthcheck:
+    #         test: ["CMD-SHELL", "pg_isready -U postgres"]
+    #         interval: 10s
+    #         timeout: 5s
+    #         retries: 5
+    #     restart: unless-stopped

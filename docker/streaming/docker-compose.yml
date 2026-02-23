@@ -92,8 +92,7 @@ services:
         restart: unless-stopped
 
     flaresolverr:
-        # image: flaresolverr/flaresolverr:latest
-        image: alexfozor/flaresolverr:pr-1300-experimental
+        image: flaresolverr/flaresolverr:latest
         container_name: flaresolverr
         user: root
         environment:

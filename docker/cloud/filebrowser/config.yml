@@ -1,0 +1,18 @@
+server:
+    database: "data/database.db"
+    cacheDir: "data/tmp"
+    sources:
+        - path: "/storage"
+          name: Home
+        - path: "/server"
+          name: Server
+    externalUrl: "https://files.{{ .Env.DOMAIN }}"
+    maxArchiveSize: 50
+auth:
+    methods:
+        proxy:
+            enabled: true
+            header: "X-authentik-username"
+            createUser: true
+        password:
+            enabled: true

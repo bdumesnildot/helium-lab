@@ -1,0 +1,39 @@
+# VPN client
+
+networks:
+    traefik_proxy:
+        external: true
+
+services:
+    # ----------------------------------------
+    # FILEBROWSER QUANTUM
+    # File manager with a web interface, supports multiple users and permissions.
+    # ----------------------------------------
+    filebrowser:
+        image: gtstef/filebrowser:stable
+        container_name: filebrowser
+        user: ${PUID}:${PGID}
+        environment:
+            FILEBROWSER_CONFIG: data/config.yml
+            DOMAIN: ${DOMAIN}
+        networks:
+            - traefik_proxy
+        ports:
+            - ${FILEBROWSER_PORT}:80
+        volumes:
+            - ./filebrowser/data:/home/filebrowser/data
+
+            - ${STORAGE_PATH}:/storage
+            - ~/:/server:ro
+
+            - ./filebrowser/tmp:/home/filebrowser/tmp # Required if uid other than 1000
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.http.routers.filebrowser.rule: Host(`drive.${DOMAIN}`)
+            traefik.http.routers.filebrowser.entrypoints: websecure
+            traefik.http.routers.filebrowser.tls.certresolver: myresolver
+            traefik.http.routers.filebrowser.middlewares: authentik-auth
+            # -- backup
+            docker-volume-backup.stop-during-backup: filebrowser-service
+        restart: unless-stopped

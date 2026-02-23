@@ -13,6 +13,7 @@ services:
         image: lscr.io/linuxserver/socket-proxy:latest
         container_name: socket-proxy
         user: root
+        init: true
         environment:
             - LOG_LEVEL=info
             - EVENTS=1

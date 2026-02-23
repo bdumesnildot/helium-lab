@@ -1,18 +1,18 @@
 # STREAMING MEDIA MANAGEMENT
-#
-volumes:
-    riven_postgresql_data:
-    riven_postgresql_dumps:
-        external: true
-    riven_legacy_postgresql_data:
-    riven_legacy_postgresql_dumps:
-        external: true
+
+# volumes:
+#     riven_postgresql_data:
+#     riven_postgresql_dumps:
+#         external: true
+#     riven_legacy_postgresql_data:
+#     riven_legacy_postgresql_dumps:
+#         external: true
 
 networks:
     traefik_proxy:
         external: true
     prowlarr:
-    riven:
+    # riven:
 
 services:
     # ----------------------------------------

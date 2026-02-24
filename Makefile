@@ -18,7 +18,7 @@ COMPOSE_FILE   := docker-compose.yml
 # Stacks in boot order (left → right). Shutdown is reversed automatically.
 # To add a new stack, just append its name here — per-stack targets are
 # generated automatically (up-<stack>, down-<stack>, restart-<stack>, …).
-STACKS := docker-utils reverse-proxy vpn auth cloud streaming downloads backups
+STACKS := docker-utils reverse-proxy vpn auth cloud streaming downloads monitoring backups
 
 # External volumes required by the stacks
 VOLUMES := authentik_postgresql_dumps

@@ -55,11 +55,52 @@ services:
         restart: unless-stopped
 
     # ----------------------------------------
+    # SEER
+    # A media discovery and recommendation engine that integrates with Jellyfin, Sonarr, Radarr
+    # ----------------------------------------
+    seerr:
+        image: ghcr.io/seerr-team/seerr:latest
+        container_name: seerr
+        user: ${PUID}:${PGID}
+        tty: true
+        init: true
+        environment:
+            TZ: ${TZ}
+            LOG_LEVEL: info
+        networks:
+            - traefik_proxy
+        ports:
+            - ${SEER_PORT}:5055
+        volumes:
+            - /srv/docker/seerr/config:/app/config
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.http.routers.seerr.rule: Host(`seerr.${DOMAIN}`)
+            traefik.http.routers.seerr.entrypoints: websecure
+            traefik.http.routers.seerr.tls.certresolver: myresolver
+            # -- backup
+            docker-volume-backup.stop-during-backup: seerr-service
+            # -- version monitoring
+            com.centurylinklabs.watchtower.enable: "true"
+            com.centurylinklabs.watchtower.monitor-only: "true"
+        healthcheck:
+            test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/status || exit 1
+            start_period: 20s
+            timeout: 3s
+            interval: 15s
+            retries: 3
+        restart: unless-stopped
+
+    # ----------------------------------------
     # PROWLARR
     # Index management
     #
     # FLARESOLVER
     # a proxy server to bypass Cloudflare and DDoS-GUARD protection
+    #
+    # BYPARR
+    # a proxy server to bypass ByPass-GUARD protection
     # ----------------------------------------
     prowlarr:
         image: lscr.io/linuxserver/prowlarr:latest
@@ -105,7 +146,6 @@ services:
             - prowlarr
         ports:
             - ${PROWLARR_FLARESOLVER_PORT}:8191
-            - ${PROWLARR_FLARESOLVER_PROMETHEUS_PORT}:8191
         restart: unless-stopped
 
     byparr:

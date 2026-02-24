@@ -39,6 +39,7 @@ services:
             - /srv/docker/filebrowser-quantum/data:/backup/filebrowser-quantum-data:ro
             # streaming
             - /srv/docker/jellyfin/config:/backup/jellyfin-config:ro
+            - /srv/docker/seerr/config:/backup/seerr-config:ro
             - /srv/docker/prowlarr/config:/backup/prowlarr-config:ro
             - /srv/docker/sonarr/config:/backup/sonarr-config:ro
             - /srv/docker/radarr/config:/backup/radarr-config:ro

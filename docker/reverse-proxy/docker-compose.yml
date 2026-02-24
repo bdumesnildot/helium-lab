@@ -27,11 +27,10 @@ services:
         ports:
             - 80:80
             - 443:443
-            - ${TRAEFIK_DASHBOARD_PORT:-8080}:8080
         volumes:
             - server_traefik_letsencrypt:/letsencrypt
         command:
-            - --api.insecure=true
+            - --api.dashboard=true
             - --log.level=DEBUG
             ## -- providers
             - --providers.docker=true

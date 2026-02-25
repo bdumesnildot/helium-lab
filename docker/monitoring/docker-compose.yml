@@ -1,5 +1,10 @@
 # Monitoring
 
+volumes:
+    server_traefik_logs:
+        external: true
+    server_goaccess_report:
+
 networks:
     traefik_proxy:
         external: true
@@ -37,3 +42,47 @@ services:
             com.centurylinklabs.watchtower.enable: "true"
             com.centurylinklabs.watchtower.monitor-only: "true"
         restart: unless-stopped
+
+    # ----------------------------------------
+    # GOACCESS
+    # Real-time web log analyzer
+    # - goaccess: generates report.html + WebSocket server (internal only)
+    # - goaccess-web: nginx serves HTML + proxies WebSocket internally
+    # ----------------------------------------
+    goaccess:
+        image: allinurl/goaccess:latest
+        container_name: goaccess
+        user: root
+        environment:
+            TZ: ${TZ}
+            DOMAIN: ${DOMAIN}
+        networks:
+            - traefik_proxy
+        volumes:
+            - ./goaccess/goaccess.conf.template:/srv/config/goaccess.conf.template:ro
+            - ./goaccess/entrypoint.sh:/srv/entrypoint.sh:ro # script to pass env vars in config and start goaccess
+            - server_traefik_logs:/srv/logs:ro
+            - server_goaccess_report:/srv/report
+        entrypoint: ["/bin/sh", "/srv/entrypoint.sh"]
+        restart: unless-stopped
+
+    goaccess-web:
+        image: nginx:alpine
+        container_name: goaccess-web
+        user: root
+        networks:
+            - traefik_proxy
+        volumes:
+            - ./goaccess/nginx.conf:/etc/nginx/nginx.conf:ro
+            - server_goaccess_report:/usr/share/nginx/html:ro
+        labels:
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            traefik.http.routers.goaccess.rule: Host(`monitor.${DOMAIN}`)
+            traefik.http.routers.goaccess.entrypoints: websecure
+            traefik.http.routers.goaccess.tls.certresolver: myresolver
+            traefik.http.routers.goaccess.middlewares: authentik-auth
+            traefik.http.services.goaccess.loadbalancer.server.port: 80
+        restart: unless-stopped
+        depends_on:
+            - goaccess

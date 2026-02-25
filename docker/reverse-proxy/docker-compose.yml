@@ -2,6 +2,8 @@
 
 volumes:
     server_traefik_letsencrypt:
+    server_traefik_logs:
+        external: true
 
 networks:
     traefik_proxy:
@@ -29,9 +31,12 @@ services:
             - 443:443
         volumes:
             - server_traefik_letsencrypt:/letsencrypt
+            - server_traefik_logs:/var/log/traefik
         command:
             - --api.dashboard=true
-            - --log.level=DEBUG
+            - --log.level=debug
+            - --accessLog.filePath=/var/log/traefik/access.log
+            - --accessLog.format=common
             ## -- providers
             - --providers.docker=true
             - --providers.docker.exposedbydefault=false

@@ -46,7 +46,7 @@ services:
             traefik.http.routers.jellyfin.entrypoints: websecure
             traefik.http.routers.jellyfin.tls.certresolver: myresolver
             traefik.http.services.jellyfin.loadbalancer.server.port: 8096
-            # traefik.http.routers.jellyfin.middlewares: authentik-auth // forward auth is disabled for now to prefer a LDAP settings in jellyfin and allow mobile app access
+            traefik.http.routers.jellyfin.middlewares: crowdsec
             # -- backup
             docker-volume-backup.stop-during-backup: jellyfin-service
             # -- version monitoring
@@ -78,6 +78,7 @@ services:
             traefik.http.routers.seerr.rule: Host(`seerr.${DOMAIN}`)
             traefik.http.routers.seerr.entrypoints: websecure
             traefik.http.routers.seerr.tls.certresolver: myresolver
+            traefik.http.routers.seerr.middlewares: crowdsec
             # -- backup
             docker-volume-backup.stop-during-backup: seerr-service
             # -- version monitoring
@@ -122,7 +123,7 @@ services:
             traefik.http.routers.prowlarr.rule: Host(`prowlarr.${DOMAIN}`)
             traefik.http.routers.prowlarr.entrypoints: websecure
             traefik.http.routers.prowlarr.tls.certresolver: myresolver
-            traefik.http.routers.prowlarr.middlewares: authentik-auth
+            traefik.http.routers.prowlarr.middlewares: crowdsec, authentik-auth
             # -- backup
             docker-volume-backup.stop-during-backup: prowlarr-service
             # -- version monitoring
@@ -184,7 +185,7 @@ services:
             traefik.http.routers.sonarr.rule: Host(`sonarr.${DOMAIN}`)
             traefik.http.routers.sonarr.entrypoints: websecure
             traefik.http.routers.sonarr.tls.certresolver: myresolver
-            traefik.http.routers.sonarr.middlewares: authentik-auth
+            traefik.http.routers.sonarr.middlewares: crowdsec, authentik-auth
             # -- backup
             docker-volume-backup.stop-during-backup: sonarr-service
             # -- version monitoring
@@ -218,7 +219,7 @@ services:
             traefik.http.routers.radarr.rule: Host(`radarr.${DOMAIN}`)
             traefik.http.routers.radarr.entrypoints: websecure
             traefik.http.routers.radarr.tls.certresolver: myresolver
-            traefik.http.routers.radarr.middlewares: authentik-auth
+            traefik.http.routers.radarr.middlewares: crowdsec, authentik-auth
             # -- backup
             docker-volume-backup.stop-during-backup: radarr-service
             # -- version monitoring

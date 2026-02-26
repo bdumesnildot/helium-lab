@@ -4,6 +4,10 @@ volumes:
     server_traefik_letsencrypt:
     server_traefik_logs:
         external: true
+    server_crowdsec_config:
+        external: true
+    server_crowdsec_data:
+        external: true
 
 networks:
     traefik_proxy:
@@ -48,16 +52,17 @@ services:
             - --providers.docker.endpoint=tcp://socket-proxy:2375
             ## -- entrypoints
             - --entryPoints.web.address=:80
+            - --entryPoints.web.forwardedHeaders.trustedIPs=${TRUSTED_IPS} # (optional) forward headers on trusted IPs
             - --entryPoints.websecure.address=:443
-            # -- forwarded headers (Cloudflare IPs) - optional
-            # -- https://www.cloudflare.com/ips-v4 & https://www.cloudflare.com/ips-v6
-            - --entryPoints.web.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32
-            - --entryPoints.websecure.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32
+            - --entryPoints.websecure.forwardedHeaders.trustedIPs=${TRUSTED_IPS} # (optional) forward headers on trusted IPs
             ## -- tls certificates
             - --certificatesresolvers.myresolver.acme.email=${CERTS_EMAIL}
             - --certificatesresolvers.myresolver.acme.storage=letsencrypt/acme.json
             - --certificatesresolvers.myresolver.acme.dnschallenge=true
             - --certificatesresolvers.myresolver.acme.dnschallenge.provider=cloudflare
+            ## -- plugins
+            - "--experimental.plugins.bouncer.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+            - "--experimental.plugins.bouncer.version=v1.5.1"
         labels:
             traefik.enable: true
             traefik.docker.network: traefik_proxy
@@ -67,7 +72,7 @@ services:
             traefik.http.routers.traefik-dashboard.rule: Host(`traefik.${DOMAIN}`)
             traefik.http.routers.traefik-dashboard.entrypoints: websecure
             traefik.http.routers.traefik-dashboard.tls.certresolver: myresolver
-            traefik.http.routers.traefik-dashboard.middlewares: authentik-auth
+            traefik.http.routers.traefik-dashboard.middlewares: crowdsec, authentik-auth
 
             ## -- Middelware "ratelimit"
             # traefik.http.middlewares.ratelimit.ratelimit.average: 100
@@ -78,6 +83,40 @@ services:
             traefik.http.middlewares.authentik-auth.forwardAuth.trustForwardHeader: true
             traefik.http.middlewares.authentik-auth.forwardauth.authResponseHeaders: X-authentik-username,X-authentik-groups,X-authentik-entitlements,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
 
+            ## -- Middelware "crowdsec-bouncer-traefik-plugin"
+            traefik.http.middlewares.crowdsec.plugin.bouncer.enabled: true
+            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdseclhost: crowdsec:8080
+            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdseclapikey: ${CROWDSEC_TRAEFIK_API_KEY}
+            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecmode: stream
+            traefik.http.middlewares.crowdsec.plugin.bouncer.forwardedheaderstrustedips: ${TRUSTED_IPS}
+            traefik.http.middlewares.crowdsec.plugin.bouncer.forwardedHeadersCustomName: X-Forwarded-For
+            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsecenabled: false
+
             # -- Watchtower
             com.centurylinklabs.watchtower.enable: "true"
         restart: always
+        depends_on:
+            - crowdsec
+
+    # ----------------------------------------
+    # CROWDSEC
+    # Security Engine + Traefik Bouncer
+    # ----------------------------------------
+    crowdsec:
+        image: crowdsecurity/crowdsec
+        container_name: crowdsec
+        user: root
+        environment:
+            COLLECTIONS: "crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/http-dos"
+            CUSTOM_HOSTNAME: crowdsec
+            BOUNCER_KEY_TRAEFIK: ${CROWDSEC_TRAEFIK_API_KEY}
+        networks:
+            - traefik_proxy
+        volumes:
+            - ./crowdsec/acquis.yml:/etc/crowdsec/acquis.yaml:ro
+            - server_traefik_logs:/var/log/traefik:ro
+            - server_crowdsec_config:/etc/crowdsec/
+            - server_crowdsec_data:/var/lib/crowdsec/data/
+        labels:
+            traefik.enable: false
+        restart: unless-stopped

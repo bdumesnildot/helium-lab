@@ -27,7 +27,8 @@ services:
             traefik.http.routers.opencode.rule: Host(`opencode.${DOMAIN}`)
             traefik.http.routers.opencode.entrypoints: websecure
             traefik.http.routers.opencode.tls.certresolver: myresolver
-            traefik.http.routers.opencode.middlewares: authentik-auth
+            traefik.http.routers.opencode.middlewares: crowdsec, authentik-auth
+            traefik.http.services.opencode.loadbalancer.server.port: 4000
             # -- backup
             docker-volume-backup.stop-during-backup: opencode-service
             # -- version monitoring

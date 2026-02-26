@@ -39,6 +39,7 @@ services:
             traefik.http.routers.filebrowser.rule: Host(`files.${DOMAIN}`)
             traefik.http.routers.filebrowser.entrypoints: websecure
             traefik.http.routers.filebrowser.tls.certresolver: myresolver
+            traefik.http.routers.filebrowser.middlewares: crowdsec
             # -- backup
             docker-volume-backup.stop-during-backup: filebrowser-quantum-service
             # -- version monitoring

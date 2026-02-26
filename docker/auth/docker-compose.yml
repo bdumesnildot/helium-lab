@@ -99,6 +99,9 @@ services:
             traefik.http.routers.authentik-output.entrypoints: websecure
             traefik.http.routers.authentik-output.tls.certresolver: myresolver
             traefik.http.services.authentik-output.loadbalancer.server.port: 9000
+
+            traefik.http.routers.authentik-output.middlewares: crowdsec
+
             # -- backup
             docker-volume-backup.stop-during-backup: authentik-server-service
             # -- version monitoring

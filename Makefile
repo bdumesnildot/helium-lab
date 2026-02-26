@@ -21,7 +21,7 @@ COMPOSE_FILE   := docker-compose.yml
 STACKS := docker-utils reverse-proxy vpn auth cloud streaming downloads devtools monitoring backups
 
 # External volumes required by the stacks
-VOLUMES := server_traefik_logs authentik_postgresql_dumps
+VOLUMES := server_crowdsec_config server_crowdsec_data server_traefik_logs authentik_postgresql_dumps
 
 # External networks required by the stacks
 NETWORKS := docker_socket_proxy traefik_proxy

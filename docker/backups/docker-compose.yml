@@ -37,14 +37,19 @@ services:
             - /srv/docker/authentik/certs:/backup/authentik-server-certs:ro
             # cloud
             - /srv/docker/filebrowser-quantum/data:/backup/filebrowser-quantum-data:ro
+            # devtools
+            - /srv/docker/opencode/config/:/backup/opencode-config:ro
+            - /srv/docker/opencode/data/:/backup/opencode-data:ro
+            # downloads
+            - /srv/docker/qbittorrent/config/:/backup/qbittorrent-config:ro
+            # monitoring
+            - /srv/docker/uptime-kuma/data/:/backup/uptime-kuma-data:ro
             # streaming
             - /srv/docker/jellyfin/config:/backup/jellyfin-config:ro
             - /srv/docker/seerr/config:/backup/seerr-config:ro
             - /srv/docker/prowlarr/config:/backup/prowlarr-config:ro
             - /srv/docker/sonarr/config:/backup/sonarr-config:ro
             - /srv/docker/radarr/config:/backup/radarr-config:ro
-            # downloads
-            - /srv/docker/qbittorrent/config/:/backup/qbittorrent-config:ro
 
             # -- path to local backup (destination)
             - ${LOCAL_BACKUPS_PATH}/docker-volume-backup:/archive

@@ -80,5 +80,4 @@ services:
 
             # -- Watchtower
             com.centurylinklabs.watchtower.enable: "true"
-            com.centurylinklabs.watchtower.monitor-only: "true"
         restart: always

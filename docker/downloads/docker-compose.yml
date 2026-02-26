@@ -23,7 +23,6 @@ services:
         labels:
             docker-volume-backup.stop-during-backup: qbittorrent-service
             com.centurylinklabs.watchtower.enable: "true"
-            com.centurylinklabs.watchtower.monitor-only: "true"
         restart: unless-stopped
 
     # ----------------------------------------

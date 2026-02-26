@@ -40,7 +40,6 @@ services:
             docker-volume-backup.stop-during-backup: uptime-kuma-service
             # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
-            com.centurylinklabs.watchtower.monitor-only: "true"
         restart: unless-stopped
 
     # ----------------------------------------

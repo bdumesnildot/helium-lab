@@ -125,7 +125,6 @@ services:
             docker-volume-backup.stop-during-backup: authentik-server-service
             # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
-            com.centurylinklabs.watchtower.monitor-only: "true"
         depends_on:
             authentik-postgresql:
                 condition: service_healthy

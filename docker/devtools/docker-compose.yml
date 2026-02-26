@@ -32,5 +32,4 @@ services:
             docker-volume-backup.stop-during-backup: opencode-service
             # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
-            com.centurylinklabs.watchtower.monitor-only: "true"
         restart: unless-stopped

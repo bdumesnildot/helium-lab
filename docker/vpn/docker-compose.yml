@@ -64,5 +64,4 @@ services:
             # traefik.http.routers.nzbget.middlewares: authentik-auth
             # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
-            com.centurylinklabs.watchtower.monitor-only: "true"
         restart: unless-stopped

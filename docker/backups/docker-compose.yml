@@ -3,6 +3,10 @@
 volumes:
     authentik_postgresql_dumps:
         external: true
+    server_crowdsec_config:
+        external: true
+    server_crowdsec_data:
+        external: true
 
 networks:
     docker_socket_proxy:

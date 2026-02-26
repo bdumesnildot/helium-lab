@@ -85,12 +85,13 @@ services:
 
             ## -- Middelware "crowdsec-bouncer-traefik-plugin"
             traefik.http.middlewares.crowdsec.plugin.bouncer.enabled: true
-            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdseclhost: crowdsec:8080
-            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdseclapikey: ${CROWDSEC_TRAEFIK_API_KEY}
             traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecmode: stream
+            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdseclhost: crowdsec:8080
             traefik.http.middlewares.crowdsec.plugin.bouncer.forwardedheaderstrustedips: ${TRUSTED_IPS}
-            traefik.http.middlewares.crowdsec.plugin.bouncer.forwardedHeadersCustomName: X-Forwarded-For
-            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsecenabled: false
+            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdseclapikey: ${CROWDSEC_TRAEFIK_API_KEY}
+            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsecenabled: true
+            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsechost: crowdsec:7422
+            # traefik.http.middlewares.crowdsec.plugin.bouncer.forwardedHeadersCustomName: X-Forwarded-For
 
             # -- Watchtower
             com.centurylinklabs.watchtower.enable: "true"
@@ -107,11 +108,15 @@ services:
         container_name: crowdsec
         user: root
         environment:
-            COLLECTIONS: "crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/http-dos"
+            COLLECTIONS: "crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/http-dos crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules"
             CUSTOM_HOSTNAME: crowdsec
             BOUNCER_KEY_TRAEFIK: ${CROWDSEC_TRAEFIK_API_KEY}
+            APPSEC_URL: 0.0.0.0:7422
         networks:
             - traefik_proxy
+        ports:
+            - 8080:8080
+            - 7422:7422
         volumes:
             - ./crowdsec/acquis.yml:/etc/crowdsec/acquis.yaml:ro
             - server_traefik_logs:/var/log/traefik:ro
@@ -119,4 +124,6 @@ services:
             - server_crowdsec_data:/var/lib/crowdsec/data/
         labels:
             traefik.enable: false
+            com.centurylinklabs.watchtower.enable: "true"
+            docker-volume-backup.stop-during-backup: crowdsec
         restart: unless-stopped

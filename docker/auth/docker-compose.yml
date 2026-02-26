@@ -93,13 +93,13 @@ services:
             traefik.http.routers.authentik.entrypoints: websecure
             traefik.http.routers.authentik.tls.certresolver: myresolver
             traefik.http.services.authentik.loadbalancer.server.port: 9000
+            traefik.http.routers.authentik.middlewares: crowdsec
 
             traefik.http.routers.authentik-output.service: authentik-output
             traefik.http.routers.authentik-output.rule: HostRegexp(`{subdomain:[a-z0-9-]+}.${DOMAIN}`) && PathPrefix(`/outpost.goauthentik.io`)
             traefik.http.routers.authentik-output.entrypoints: websecure
             traefik.http.routers.authentik-output.tls.certresolver: myresolver
             traefik.http.services.authentik-output.loadbalancer.server.port: 9000
-
             traefik.http.routers.authentik-output.middlewares: crowdsec
 
             # -- backup

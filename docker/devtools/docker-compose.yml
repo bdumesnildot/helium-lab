@@ -1,0 +1,36 @@
+# AI Development Tools
+
+networks:
+    traefik_proxy:
+        external: true
+
+services:
+    # ----------------------------------------
+    # OPENCODE
+    # AI-powered development environment with web interface
+    # ----------------------------------------
+    opencode:
+        image: ghcr.io/fluxbase-eu/opencode-docker:latest
+        container_name: opencode
+        user: ${PUID}:${PGID}
+        networks:
+            - traefik_proxy
+        ports:
+            - ${OPENCODE_PORT}:4000
+        volumes:
+            - /srv/docker/opencode/config:/home/opencode/.config/opencode
+            - /srv/docker/opencode/data:/home/opencode/.local/share/opencode
+            - ${OPENCODE_WORKSPACE_PATH}:/home/opencode/workspace
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.http.routers.opencode.rule: Host(`opencode.${DOMAIN}`)
+            traefik.http.routers.opencode.entrypoints: websecure
+            traefik.http.routers.opencode.tls.certresolver: myresolver
+            traefik.http.routers.opencode.middlewares: authentik-auth
+            # -- backup
+            docker-volume-backup.stop-during-backup: opencode-service
+            # -- version monitoring
+            com.centurylinklabs.watchtower.enable: "true"
+            com.centurylinklabs.watchtower.monitor-only: "true"
+        restart: unless-stopped

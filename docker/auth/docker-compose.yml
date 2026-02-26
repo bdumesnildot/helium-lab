@@ -4,7 +4,6 @@ volumes:
     authentik_postgresql_data:
     authentik_postgresql_dumps:
         external: true
-    authentik_redis_data:
 
 networks:
     authentik_server:
@@ -50,35 +49,14 @@ services:
         restart: unless-stopped
 
     # ----------------------
-    # REDIS
-    # ----------------------
-    authentik-redis:
-        image: docker.io/library/redis:alpine
-        container_name: authentik-redis
-        user: root
-        networks:
-            - authentik_server
-        ports:
-            - ${AUTHENTIK_REDIS_PORT}:6379
-        volumes:
-            - authentik_redis_data:/data
-        healthcheck:
-            test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
-            start_period: 20s
-            interval: 30s
-            retries: 5
-            timeout: 3s
-        restart: unless-stopped
-
-    # ----------------------
     # AUTHENTIK SERVER
     # ----------------------
     authentik-server:
-        image: ghcr.io/goauthentik/server:2025.10.2
+        image: ghcr.io/goauthentik/server:2025.12.4
         container_name: authentik-server
         user: ${PUID}:${PGID}
         environment:
-            AUTHENTIK_REDIS__HOST: authentik-redis
+            # AUTHENTIK_REDIS__HOST: authentik-redis
             AUTHENTIK_POSTGRESQL__HOST: authentik-postgresql
             AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
             AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
@@ -101,7 +79,7 @@ services:
         ports:
             - ${AUTHENTIK_SERVER_PORT}:9000
         volumes:
-            - /srv/docker/authentik/media:/media
+            - /srv/docker/authentik/data:/data
             - /srv/docker/authentik/templates:/templates
             - /srv/docker/authentik/certs:/certs
         command: server
@@ -128,15 +106,13 @@ services:
         depends_on:
             authentik-postgresql:
                 condition: service_healthy
-            authentik-redis:
-                condition: service_healthy
         restart: unless-stopped
 
     # ----------------------
     # AUTHENTIK WORKER
     # ----------------------
     authentik-worker:
-        image: ghcr.io/goauthentik/server:2025.10.2
+        image: ghcr.io/goauthentik/server:2025.12.4
         container_name: authentik-worker
         user: ${PUID}:${PGID}
         environment:
@@ -169,14 +145,12 @@ services:
         depends_on:
             authentik-postgresql:
                 condition: service_healthy
-            authentik-redis:
-                condition: service_healthy
 
     # ----------------------
     # AUTHENTIK LDAP OUTPOST
     # ----------------------
     authentik-ldap:
-        image: ghcr.io/goauthentik/ldap:2025.10.2
+        image: ghcr.io/goauthentik/ldap:2025.12.4
         container_name: authentik-ldap
         environment:
             AUTHENTIK_HOST: http://authentik-server:9000

@@ -32,7 +32,7 @@ services:
             # -- services volumes to backup (sources)
             # auth
             - authentik_postgresql_dumps:/backup/authentik-postgresql-dump:ro
-            - /srv/docker/authentik/media:/backup/authentik-server-media:ro
+            - /srv/docker/authentik/data:/backup/authentik-server-data:ro
             - /srv/docker/authentik/templates:/backup/authentik-server-templates:ro
             - /srv/docker/authentik/certs:/backup/authentik-server-certs:ro
             # cloud

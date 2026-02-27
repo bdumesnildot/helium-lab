@@ -10,3 +10,9 @@ name: myAppSecComponent
 source: appsec
 labels:
     type: appsec
+
+---
+filenames:
+    - /var/log/auth.log
+labels:
+    type: syslog

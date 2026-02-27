@@ -1,8 +1,15 @@
 # VPN client
 
+volumes:
+    immich_machine_learning_model_cache:
+    immich_postgresql_data:
+    immich_postgresql_dumps:
+        external: true
+
 networks:
     traefik_proxy:
         external: true
+    immich:
 
 services:
     # ----------------------------------------
@@ -45,3 +52,93 @@ services:
             # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
         restart: unless-stopped
+
+    # ----------------------------------------
+    # IMMICH
+    # Immich is a self-hosted photo and video backup solution with a web interface, mobile apps, and desktop clients.
+    # ----------------------------------------
+    immich-server:
+        image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+        container_name: immich-server
+        user: ${PUID}:${PGID}
+        tty: true
+        devices:
+            - /dev/dri:/dev/dri
+        environment:
+            TZ: ${TZ}
+            # -- database
+            DB_HOSTNAME: immich-postgres
+            DB_USERNAME: ${IMMICH_DB_USERNAME}
+            DB_PASSWORD: ${IMMICH_DB_PASSWORD}
+            DB_DATABASE_NAME: ${IMMICH_DB_DATABASE_NAME}
+            # -- redis
+            REDIS_HOSTNAME: immich-redis
+            # -- immich machine learning
+            IMMICH_MACHINE_LEARNING_URL: http://immich-machine-learning:3003
+            # -- hardware acceleration for transcoding
+            LIBVA_DRIVER_NAME: iHD
+            IMMICH_TRANSMISSION_HWACCEL: "true"
+        networks:
+            - traefik_proxy
+            - immich
+        ports:
+            - 2283:2283
+        volumes:
+            - ${IMMICH_UPLOAD_LOCATION}:/data
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            traefik.http.routers.immich-server.rule: Host(`photos.${DOMAIN}`)
+            traefik.http.routers.immich-server.entrypoints: websecure
+            traefik.http.routers.immich-server.tls.certresolver: myresolver
+            traefik.http.routers.immich-server.middlewares: crowdsec,authentik-auth
+            # -- backup
+            docker-volume-backup.stop-during-backup: immich-server-service
+            # -- version monitoring
+            com.centurylinklabs.watchtower.enable: "true"
+        healthcheck:
+            disable: false
+        restart: unless-stopped
+        depends_on:
+            - immich-redis
+            - immich-postgres
+
+    immich-machine-learning:
+        image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+        container_name: immich-machine-learning
+        networks:
+            - immich
+        volumes:
+            - immich_machine_learning_model_cache:/cache
+        healthcheck:
+            disable: false
+        restart: unless-stopped
+
+    immich-redis:
+        image: docker.io/valkey/valkey:9@sha256:546304417feac0874c3dd576e0952c6bb8f06bb4093ea0c9ca303c73cf458f63
+        container_name: immich-redis
+        networks:
+            - immich
+        healthcheck:
+            test: redis-cli ping || exit 1
+        restart: unless-stopped
+
+    immich-postgres:
+        image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+        container_name: immich-postgres
+        shm_size: 128mb
+        environment:
+            POSTGRES_USER: ${IMMICH_DB_USERNAME}
+            POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD}
+            POSTGRES_DB: ${IMMICH_DB_DATABASE_NAME}
+            POSTGRES_INITDB_ARGS: "--data-checksums"
+        networks:
+            - immich
+        volumes:
+            - immich_postgresql_data:/var/lib/postgresql/data
+            - immich_postgresql_dumps:/tmp/dumps
+            - ../backups/scripts/postgres-backup.sh:/postgres-backup.sh:ro
+        restart: unless-stopped
+        healthcheck:
+            disable: false

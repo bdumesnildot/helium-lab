@@ -92,7 +92,7 @@ services:
             traefik.http.routers.immich-server.rule: Host(`photos.${DOMAIN}`)
             traefik.http.routers.immich-server.entrypoints: websecure
             traefik.http.routers.immich-server.tls.certresolver: myresolver
-            traefik.http.routers.immich-server.middlewares: crowdsec,authentik-auth
+            traefik.http.routers.immich-server.middlewares: crowdsec
             # -- backup
             docker-volume-backup.stop-during-backup: immich-server-service
             # -- version monitoring

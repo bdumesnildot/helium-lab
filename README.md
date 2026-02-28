@@ -6,25 +6,29 @@ This home server setup provides a collection of self-hosted services for media s
 
 ## SERVICES
 
-#### 🚦 Reverse Proxy and SSL
-
-- **[Traefik](https://traefik.io/)**: Reverse proxy with SSL support for managing and securing your web services.
-
-#### 🧰 Security & Utils
-
-- **[Docker socket proxy](https://docs.linuxserver.io/images/docker-socket-proxy/)**: Security-enhanced proxy which allows you to apply access rules to the Docker socket
-- **[Gluetun](https://github.com/qdm12/gluetun)**: VPN client for routing traffic through a secure tunnel.
-
-#### 🔐 Authentication
-
-- **[Authentik](https://goauthentik.io/)**: IdP (Identity Provider) and SSO (single sign on), solution for managing user access to your services.
-
-#### 📥 Downloads
-
-- **[qBittorrent](https://www.qbittorrent.org/)**: A powerful and user-friendly torrent client.
-- **[nzbget](https://nzbget.net/)**: A binary newsreader for downloading files from Usenet.
-
-<br>
+| Category | Service | Description |
+|----------|---------|-------------|
+| **Reverse Proxy** | [Traefik](https://traefik.io/) | Reverse proxy with SSL support |
+| | [Crowdsec](https://www.crowdsec.net/) | Security engine with Traefik bouncer |
+| **Docker Utils** | [Socket Proxy](https://docs.linuxserver.io/images/docker-socket-proxy/) | Secure Docker socket access |
+| | [Watchtower](https://containrrr.dev/watchtower/) | Container update monitoring |
+| **Auth** | [Authentik](https://goauthentik.io/) | Identity provider & SSO |
+| **Cloud** | [Immich](https://immich.app/) | Photo/video backup solution |
+| | [Filebrowser](https://filebrowser.org/) | Web file manager |
+| **DevTools** | [Opencode](https://opencode.ai/) | AI development environment |
+| | [Obsidian Live Sync](https://github.com/vrtmrz/obsidian-livesync) | CouchDB sync for Obsidian |
+| **Monitoring** | [Uptime Kuma](https://uptime.kuma.pet/) | Service uptime monitoring |
+| | [Goaccess](https://goaccess.io/) | Real-time web log analyzer |
+| **Streaming** | [Jellyfin](https://jellyfin.org/) | Media server |
+| | [Seerr](https://github.com/seerr-team/seerr) | Media discovery & recommendations |
+| | [Prowlarr](https://prowlarr.com/) | Index manager |
+| | [Sonarr](https://sonarr.tv/) | TV series management |
+| | [Radarr](https://radarr.video/) | Movie management |
+| | [Flaresolverr](https://github.com/FlareSolverr/FlareSolverr) | Cloudflare bypass proxy |
+| | [Byparr](https://github.com/ThePhaseless/Byparr) | DDoS-Guard bypass proxy |
+| **Downloads** | [qBittorrent](https://www.qbittorrent.org/) | Torrent client |
+| **VPN** | [Gluetun](https://github.com/qdm12/gluetun) | VPN client |
+| **Backups** | [Docker Volume Backup](https://offen.github.io/docker-volume-backup/) | Automated volume backups |
 
 ## QUICK START
 

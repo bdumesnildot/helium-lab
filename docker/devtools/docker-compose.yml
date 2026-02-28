@@ -34,3 +34,42 @@ services:
             # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
         restart: unless-stopped
+
+    # ----------------------------------------
+    # OBSIDIAN LIVE SYNC
+    # Real-time synchronization of Obsidian vaults across devices
+    # ----------------------------------------
+    obsidian-livesync-couchdb:
+        image: couchdb:latest
+        container_name: obsidian-livesync
+        user: ${PUID}:${PGID}
+        environment:
+            - COUCHDB_USER=${OBSIDIAN_COUCHDB_USER}
+            - COUCHDB_PASSWORD=${OBSIDIAN_COUCHDB_PASSWORD}
+        networks:
+            - traefik_proxy
+        ports:
+            - ${OBSIDIAN_COUCHDB_PORT:-5984}:5984
+        volumes:
+            - /srv/docker/obsidian-livesync/etc:/opt/couchdb/etc/local.d
+            - /srv/docker/obsidian-livesync/data:/opt/couchdb/data
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.http.routers.obsidian-livesync.rule: Host(`obsidian-livesync.${DOMAIN}`)
+            traefik.http.routers.obsidian-livesync.entrypoints: websecure
+            traefik.http.routers.obsidian-livesync.tls.certresolver: myresolver
+            traefik.http.routers.obsidian-livesync.middlewares: crowdsec, obsidiancors
+            traefik.http.services.obsidian-livesync.loadbalancer.server.port: 5984
+            # -- traefik middleware CORS
+            traefik.http.middlewares.obsidiancors.headers.accesscontrolallowmethods: GET,PUT,POST,HEAD,DELETE
+            traefik.http.middlewares.obsidiancors.headers.accesscontrolallowheaders: accept,authorization,content-type,origin,referer
+            traefik.http.middlewares.obsidiancors.headers.accesscontrolalloworiginlist: app://obsidian.md,capacitor://localhost,http://localhost
+            traefik.http.middlewares.obsidiancors.headers.accesscontrolmaxage: 3600
+            traefik.http.middlewares.obsidiancors.headers.addvaryheader: true
+            traefik.http.middlewares.obsidiancors.headers.accessControlAllowCredentials: true
+            # -- backup
+            docker-volume-backup.stop-during-backup: obsidian-livesync-service
+            # -- version monitoring
+            com.centurylinklabs.watchtower.enable: "true"
+        restart: unless-stopped

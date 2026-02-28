@@ -7,6 +7,8 @@ volumes:
         external: true
     server_crowdsec_data:
         external: true
+    immich_postgresql_dumps:
+        external: true
 
 networks:
     docker_socket_proxy:
@@ -41,9 +43,12 @@ services:
             - /srv/docker/authentik/certs:/backup/authentik-server-certs:ro
             # cloud
             - /srv/docker/filebrowser-quantum/data:/backup/filebrowser-quantum-data:ro
+            - immich_postgresql_dumps:/backup/immich-postgresql-dump:ro
             # devtools
             - /srv/docker/opencode/config/:/backup/opencode-config:ro
             - /srv/docker/opencode/data/:/backup/opencode-data:ro
+            - /srv/docker/obsidian-livesync/etc:/backup/obsidian-livesync-etc:ro
+            - /srv/docker/obsidian-livesync/data:/backup/obsidian-livesync-data:ro
             # downloads
             - /srv/docker/qbittorrent/config/:/backup/qbittorrent-config:ro
             # monitoring

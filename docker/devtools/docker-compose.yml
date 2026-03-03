@@ -1,8 +1,14 @@
-# AI Development Tools
+# Dev Tools
+
+volumes:
+    n8n_postgresql_data:
+    n8n_postgresql_dumps:
+        external: true
 
 networks:
     traefik_proxy:
         external: true
+    n8n_internal:
 
 services:
     # ----------------------------------------
@@ -33,6 +39,84 @@ services:
             docker-volume-backup.stop-during-backup: opencode-service
             # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
+        restart: unless-stopped
+
+    # ----------------------------------------
+    # N8N
+    # Workflow automation tool
+    # ----------------------------------------
+    n8n:
+        image: docker.n8n.io/n8nio/n8n
+        container_name: n8n
+        environment:
+            # -- n8n Base Config
+            GENERIC_TIMEZONE: ${TZ}
+            N8N_HOST: n8n.${DOMAIN}
+            WEBHOOK_URL: https://n8n.${DOMAIN}/
+            N8N_PORT: 5678
+            N8N_PROTOCOL: https
+            NODE_ENV: production
+        networks:
+            - traefik_proxy
+            - n8n_internal
+        ports:
+            - ${N8N_PORT}:5678
+        volumes:
+            - /srv/docker/n8n/data:/home/node/.n8n
+            - /srv/docker/n8n/files:/home/node/files
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            traefik.http.routers.n8n.rule: Host(`n8n.${DOMAIN}`)
+            traefik.http.routers.n8n.entrypoints: websecure
+            traefik.http.routers.n8n.tls.certresolver: myresolver
+            traefik.http.routers.n8n.middlewares: crowdsec, authentik-auth
+            traefik.http.middlewares.n8n.headers.SSLRedirect: true
+            traefik.http.middlewares.n8n.headers.STSSeconds: 315360000
+            traefik.http.middlewares.n8n.headers.browserXSSFilter: true
+            traefik.http.middlewares.n8n.headers.contentTypeNosniff: true
+            traefik.http.middlewares.n8n.headers.forceSTSHeader: true
+            traefik.http.middlewares.n8n.headers.SSLHost: ${DOMAIN}
+            traefik.http.middlewares.n8n.headers.STSIncludeSubdomains: true
+            traefik.http.middlewares.n8n.headers.STSPreload: true
+            # -- backup
+            docker-volume-backup.stop-during-backup: n8n-service
+        depends_on:
+            n8n-postgresql:
+                condition: service_healthy
+        restart: unless-stopped
+
+    n8n-postgresql:
+        image: docker.io/library/postgres:16-alpine
+        container_name: n8n-postgresql
+        user: root
+        environment:
+            TZ: ${TZ}
+            POSTGRES_DB: ${N8N_POSTGRESQL_DB}
+            POSTGRES_USER: ${N8N_POSTGRESQL_USER}
+            POSTGRES_PASSWORD: ${N8N_POSTGRESQL_PASS:?database password required}
+        networks:
+            - n8n_internal
+        ports:
+            - ${N8N_POSTGRESQL_PORT}:5432
+        volumes:
+            - n8n_postgresql_data:/var/lib/postgresql/data
+            - n8n_postgresql_dumps:/tmp/dumps
+            - ../backups/scripts/postgres-backup.sh:/postgres-backup.sh:ro
+        labels:
+            docker-volume-backup.exec-label: n8n-postgresql
+            docker-volume-backup.archive-pre: sh -c '/postgres-backup.sh'
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}",
+                ]
+            start_period: 20s
+            interval: 30s
+            retries: 5
+            timeout: 5s
         restart: unless-stopped
 
     # ----------------------------------------

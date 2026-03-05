@@ -1,0 +1,46 @@
+# Domotic
+
+networks:
+    traefik_proxy:
+        external: true
+    domotic_internal:
+
+services:
+    # ----------------------------------------
+    # HOME ASSISTANT
+    # Home automation platform that puts local control and privacy first
+    # --
+    # HACS (Home Assistant Community Store) refer to https://hacs.xyz
+    # Auth OICD refer to https://github.com/cavefire/hass-openid
+    # ----------------------------------------
+    homeassistant:
+        image: lscr.io/linuxserver/homeassistant:latest
+        container_name: homeassistant
+        environment:
+            - TZ=${TZ}
+            - PUID=${PUID}
+            - PGID=${PGID}
+        networks:
+            - traefik_proxy
+            - domotic_internal
+        # network_mode: host # uncomment this and comment networks if you need devices discovery (broadcast, mDNS, SSDP, etc.)
+        ports:
+            - ${HOME_ASSISTANT_PORT}:8123
+        volumes:
+            - /srv/docker/home-assistant/data:/config
+        # devices:
+        # - /path/to/device:/path/to/device # add zigbee usb stick here if you have one
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            traefik.http.routers.homeassistant.rule: Host(`hass.${DOMAIN}`)
+            traefik.http.routers.homeassistant.entrypoints: websecure
+            traefik.http.routers.homeassistant.tls.certresolver: myresolver
+            traefik.http.routers.homeassistant.middlewares: crowdsec
+            traefik.http.services.homeassistant.loadbalancer.server.port: 8123
+            # -- backup
+            docker-volume-backup.stop-during-backup: homeassistant-service
+            # -- version monitoring
+            com.centurylinklabs.watchtower.enable: "true"
+        restart: unless-stopped

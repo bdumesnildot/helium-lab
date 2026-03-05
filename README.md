@@ -29,6 +29,7 @@ This home server setup provides a collection of self-hosted services for media s
 | **Downloads** | [qBittorrent](https://www.qbittorrent.org/) | Torrent client |
 | **VPN** | [Gluetun](https://github.com/qdm12/gluetun) | VPN client |
 | **Backups** | [Docker Volume Backup](https://offen.github.io/docker-volume-backup/) | Automated volume backups |
+| **Domotic** | [Home Assistant](https://www.home-assistant.io/) | Home automation platform |
 
 ## QUICK START
 

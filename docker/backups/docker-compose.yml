@@ -49,6 +49,8 @@ services:
             - /srv/docker/opencode/data/:/backup/opencode-data:ro
             - /srv/docker/obsidian-livesync/etc:/backup/obsidian-livesync-etc:ro
             - /srv/docker/obsidian-livesync/data:/backup/obsidian-livesync-data:ro
+            # domotic
+            - /srv/docker/home-assistant/data:/backup/home-assistant-data:ro
             # downloads
             - /srv/docker/qbittorrent/config/:/backup/qbittorrent-config:ro
             # monitoring

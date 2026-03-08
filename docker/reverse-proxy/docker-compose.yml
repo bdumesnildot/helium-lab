@@ -91,6 +91,7 @@ services:
             traefik.http.middlewares.crowdsec.plugin.bouncer.crowdseclapikey: ${CROWDSEC_TRAEFIK_API_KEY}
             traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsecenabled: true
             traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsechost: crowdsec:7422
+            traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecsendscenarioname: true
 
             # -- Watchtower
             com.centurylinklabs.watchtower.enable: "true"

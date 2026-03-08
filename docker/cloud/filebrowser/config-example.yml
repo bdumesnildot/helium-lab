@@ -6,16 +6,18 @@ server:
     database: "data/database.db"
     cacheDir: "data/tmp"
     sources:
-        - path: "/storage"
+        - path: "/storage/users"
           name: Home
-        - path: "/server"
-          name: Server
+        - path: "/storage/shared"
+          name: Shared
     externalUrl: "https://files.[ DOMAIN ]"
     maxArchiveSize: 50
 auth:
+    adminUsername: admin
+    adminPassword: admin
     methods:
         password:
-            enabled: false
+            enabled: true
         oidc:
             enabled: true
             issuerUrl: "https://auth.[ DOMAIN ]/application/o/filebrowser/"

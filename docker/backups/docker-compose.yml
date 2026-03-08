@@ -7,11 +7,11 @@ volumes:
         external: true
     server_crowdsec_data:
         external: true
-    immich_postgresql_dumps:
-        external: true
 
 networks:
     docker_socket_proxy:
+        external: true
+    traefik_proxy:
         external: true
 
 services:
@@ -41,9 +41,10 @@ services:
             - /srv/docker/authentik/data:/backup/authentik-server-data:ro
             - /srv/docker/authentik/templates:/backup/authentik-server-templates:ro
             - /srv/docker/authentik/certs:/backup/authentik-server-certs:ro
+            # backup
+            - /srv/docker/rclone/config:/backup/rclone-config:ro
             # cloud
             - /srv/docker/filebrowser-quantum/data:/backup/filebrowser-quantum-data:ro
-            - immich_postgresql_dumps:/backup/immich-postgresql-dump:ro
             # devtools
             - /srv/docker/opencode/config/:/backup/opencode-config:ro
             - /srv/docker/opencode/data/:/backup/opencode-data:ro
@@ -68,5 +69,44 @@ services:
             # -- path to local backup (destination)
             - ${LOCAL_BACKUPS_PATH}/docker-volume-backup:/archive
         labels:
+            com.centurylinklabs.watchtower.enable: "true"
+        restart: unless-stopped
+
+    # ----------------------------------------
+    # RCLONE
+    # Rclone server for remote management of backups and other files
+    # ----------------------------------------
+    rclone:
+        image: rclone/rclone:latest
+        container_name: rclone
+        user: ${PUID}:${PGID}
+        networks:
+            - traefik_proxy
+        ports:
+            - ${RCLONE_PORT}:5572
+        volumes:
+            - /srv/docker/rclone/config:/config/rclone
+            # -- sources
+            - /mnt/das-cloud/documents:/src/das-cloud/documents:ro
+            - /mnt/das-cloud/immich:/src/das-cloud/immich:ro
+            # -- destinations
+            - /mnt/das-cloud/backups:/dest/das-cloud/backups
+        command: >
+            rcd --rc-web-gui --rc-addr :5572
+            --rc-user ${RCLONE_USER}
+            --rc-pass ${RCLONE_PASS}
+            --cache-dir /config/rclone/cache
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            traefik.http.routers.rclone.rule: Host(`rclone.${DOMAIN}`)
+            traefik.http.routers.rclone.entrypoints: websecure
+            traefik.http.routers.rclone.tls.certresolver: myresolver
+            traefik.http.routers.rclone.middlewares: crowdsec, authentik-auth
+            traefik.http.services.rclone.loadbalancer.server.port: 5572
+            # -- backup
+            docker-volume-backup.stop-during-backup: rclone-service
+            # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
         restart: unless-stopped

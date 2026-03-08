@@ -1,10 +1,8 @@
-# VPN client
+# Cloud
 
 volumes:
     immich_machine_learning_model_cache:
     immich_postgresql_data:
-    immich_postgresql_dumps:
-        external: true
 
 networks:
     traefik_proxy:
@@ -93,8 +91,6 @@ services:
             traefik.http.routers.immich-server.entrypoints: websecure
             traefik.http.routers.immich-server.tls.certresolver: myresolver
             traefik.http.routers.immich-server.middlewares: crowdsec
-            # -- backup
-            docker-volume-backup.stop-during-backup: immich-server-service
             # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
         healthcheck:
@@ -137,11 +133,6 @@ services:
             - immich
         volumes:
             - immich_postgresql_data:/var/lib/postgresql/data
-            - immich_postgresql_dumps:/tmp/dumps
-            - ../backups/scripts/postgres-backup.sh:/postgres-backup.sh:ro
-        labels:
-            docker-volume-backup.exec-label: immich-postgresql
-            docker-volume-backup.archive-pre: sh -c '/postgres-backup.sh'
         restart: unless-stopped
         healthcheck:
             disable: false

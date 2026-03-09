@@ -67,7 +67,7 @@ services:
             - /srv/docker/radarr/config:/backup/radarr-config:ro
 
             # -- path to local backup (destination)
-            - ${LOCAL_BACKUPS_PATH}/docker-volume-backup:/archive
+            - ${LOCAL_BACKUPS_PATH}/server-docker-volume-backup:/archive
         labels:
             com.centurylinklabs.watchtower.enable: "true"
         restart: unless-stopped
@@ -87,10 +87,10 @@ services:
         volumes:
             - /srv/docker/rclone/config:/config/rclone
             # -- sources
-            - /mnt/das-cloud/documents:/src/das-cloud/documents:ro
-            - /mnt/das-cloud/immich:/src/das-cloud/immich:ro
+            - /mnt/das-cloud/documents:/data/src/das-cloud/documents:ro
+            - /mnt/das-cloud/immich:/data/src/das-cloud/immich:ro
             # -- destinations
-            - /mnt/das-cloud/backups:/dest/das-cloud/backups
+            - /mnt/das-cloud/backups:/data/dest/das-cloud/backups
         command: >
             rcd --rc-web-gui --rc-addr :5572
             --rc-user ${RCLONE_USER}

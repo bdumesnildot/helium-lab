@@ -65,10 +65,16 @@ services:
             - /srv/docker/prowlarr/config:/backup/prowlarr-config:ro
             - /srv/docker/sonarr/config:/backup/sonarr-config:ro
             - /srv/docker/radarr/config:/backup/radarr-config:ro
+            - /srv/docker/bazarr/config:/backup/bazarr-config:ro
 
             # -- path to local backup (destination)
             - ${LOCAL_BACKUPS_PATH}/server-docker-volume-backup:/archive
         labels:
+            # -- CRON job for setting correct permissions on backup files after each backup run
+            ofelia.enabled: true
+            ofelia.job-exec.set-permission.schedule: 0 4 * * *
+            ofelia.job-exec.set-permission.command: chown -R ${PUID}:${PGID} /archive
+            # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
         restart: unless-stopped
 
@@ -87,6 +93,7 @@ services:
         volumes:
             - /srv/docker/rclone/config:/config/rclone
             # -- sources
+            - ${LOCAL_BACKUPS_PATH}/server-docker-volume-backup:/data/src/local/server-docker-volume-backup:ro
             - /mnt/das-cloud/documents:/data/src/das-cloud/documents:ro
             - /mnt/das-cloud/immich:/data/src/das-cloud/immich:ro
             # -- destinations
@@ -97,6 +104,18 @@ services:
             --rc-pass ${RCLONE_PASS}
             --cache-dir /config/rclone/cache
         labels:
+            # -- CRON job
+            ofelia.enabled: true
+            # sync local docker volumes backup to das-cloud
+            ofelia.job-exec.sync-docker-volumes-backup.schedule: 15 4 * * *
+            ofelia.job-exec.sync-docker-volumes-backup.command: >
+                sh -c "rclone sync /data/src/local/server-docker-volume-backup /data/dest/das-cloud/backups/server-docker-volume-backup --size-only --fast-list \
+                && rclone sync /data/src/local/server-docker-volume-backup ovh-s3-crypt:backups/server-docker-volume-backup --s3-storage-class=STANDARD_IA --size-only --fast-list --create-empty-src-dirs"
+            # sync das-cloud documents and photos to s3 object storage (4:30am every 3 days)
+            ofelia.job-exec.sync-das-cloud-to-s3.schedule: 30 4 */3 * *
+            ofelia.job-exec.sync-das-cloud-to-s3.command: >
+                sh -c "rclone sync /data/src/das-cloud/documents ovh-s3-crypt:backups/das-cloud/documents --s3-storage-class=STANDARD_IA --exclude '/users/helena/**' --size-only --fast-list --create-empty-src-dirs \
+                && rclone sync /data/src/das-cloud/immich ovh-s3-crypt:backups/das-cloud/immich --s3-storage-class=STANDARD_IA --size-only --fast-list --create-empty-src-dirs"
             # -- traefik
             traefik.enable: true
             traefik.docker.network: traefik_proxy
@@ -110,3 +129,22 @@ services:
             # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
         restart: unless-stopped
+
+    # ----------------------------------------
+    # OFELIA
+    # Job scheduler for docker containers (cron replacement)
+    # ----------------------------------------
+    ofelia:
+        image: mcuadros/ofelia:latest
+        container_name: ofelia
+        environment:
+            DOCKER_HOST: tcp://socket-proxy:${SOCKET_PROXY_PORT}
+        networks:
+            - docker_socket_proxy
+        labels:
+            com.centurylinklabs.watchtower.enable: "true"
+        command: daemon --docker
+        restart: unless-stopped
+        depends_on:
+            - docker-volume-backup
+            - rclone

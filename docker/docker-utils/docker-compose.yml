@@ -23,14 +23,14 @@ services:
             IMAGES: 1 # Portainer, backup
             NETWORKS: 1 # Portainer
             VOLUMES: 1 # Portainer, backup
-            CONTAINERS: 1 # Traefik, Authentik, portainer, backup, etc.
+            CONTAINERS: 1 # Traefik, Authentik, Ofelia, portainer, backup, etc.
 
             ALLOW_START: 1 # Authentik, Portainer, backup
             ALLOW_STOP: 1 # Authentik, Portainer, backup
             ALLOW_RESTARTS: 1 # Portainer
-            SERVICES: 0 # Portainer
-            TASKS: 1 # Portainer, backup
-            EXEC: 1 # backup
+            SERVICES: 1 # Ofelia Portainer
+            TASKS: 1 # Portainer, backup, Ofelia
+            EXEC: 1 # backup, ofelia
             POST: 1 # Authentik, backup, Watchtower
             PULL: 1 # Watchtower
             NODES: 1 # backup

@@ -221,3 +221,39 @@ services:
             # -- version monitoring
             com.centurylinklabs.watchtower.enable: "true"
         restart: unless-stopped
+
+    # ----------------------------------------
+    # BAZARR
+    # Subtitles Management
+    # ----------------------------------------
+    bazarr:
+        image: lscr.io/linuxserver/bazarr:latest
+        container_name: bazarr
+        tty: true
+        environment:
+            TZ: ${TZ}
+            PUID: ${PUID}
+            PGID: ${PGID}
+        networks:
+            - traefik_proxy
+        ports:
+            - ${BAZARR_PORT}:6767
+        volumes:
+            - /srv/docker/bazarr/config:/config
+            - ${MEDIA_UNIFIED_PATH}/movies:/movies
+            - ${MEDIA_UNIFIED_PATH}/animations:/animations
+            - ${MEDIA_UNIFIED_PATH}/animes:/animes
+            - ${MEDIA_UNIFIED_PATH}/tvshows:/tv
+        labels:
+            # -- traefik
+            traefik.enable: true
+            traefik.docker.network: traefik_proxy
+            traefik.http.routers.bazarr.rule: Host(`bazarr.${DOMAIN}`)
+            traefik.http.routers.bazarr.entrypoints: websecure
+            traefik.http.routers.bazarr.tls.certresolver: myresolver
+            traefik.http.routers.bazarr.middlewares: crowdsec, authentik-auth
+            # -- backup
+            docker-volume-backup.stop-during-backup: bazarr-service
+            # -- version monitoring
+            com.centurylinklabs.watchtower.enable: "true"
+        restart: unless-stopped

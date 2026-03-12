@@ -33,7 +33,8 @@ services:
             - /srv/docker/filebrowser-quantum/data:/home/filebrowser/data
             - /srv/docker/filebrowser-quantum/tmp:/home/filebrowser/tmp # Required if uid other than 1000
             # -- path
-            - ${STORAGE_PATH}:/storage
+            - ${STORAGE_MOUNT_PATH}:/storage/mnt
+            - ${STORAGE_LOCAL_MEDIA_PATH}:/storage/local-media
             - ~/:/server:ro
         entrypoint: ["sh", "-c"] # Optional, copy the config file to the data directory for backup purposes
         command: >
